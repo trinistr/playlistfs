@@ -1,0 +1,54 @@
+#define FUSE_USE_VERSION 26
+#define _XOPEN_SOURCE 500	//_POSIX_C_SOURCE 200809L
+
+#include <fuse.h>
+
+// Allowed operations. Unused ones are commented out,
+// deprecated are not listed at all
+struct fuse_operations pfs_operations = {
+	.getattr = pfs_getattr,
+	//.readlink = pfs_readlink,
+	//.mknod = pfs_mknod,	// No file creation. Regular files should use .create
+	//.mkdir = pfs_mkdir,
+	//.rmdir = pfs_rmdir,
+	//.unlink = pfs_unlink,
+	//.symlink = pfs_symlink,
+	.rename = pfs_rename,
+	.link = pfs_link,
+	.chmod = pfs_chmod,	// Maybe these two should not actually be allowed?
+	.chown = pfs_chown,
+	.truncate = pfs_truncate,	// Questionable
+	.open = pfs_open,
+	.read = pfs_read,
+	.write = pfs_write,
+	.statfs = pfs_statvfs,	// = statvfs
+	//.flush = pfs_flush,
+	.release = pfs_release,	// Files need to be closed
+	.fsync = pfs_fsync,
+	//.setxatr = pfs_setxattr,	// These four will not be defined for now
+	//.getxattr = pfs_getxattr,
+	//.listxattr = pfs_listxattr,
+	//.removexattr = pfs_removexattr,
+	.opendir = pfs_opendir,	// Need to actually check if this gets called on root
+	.readdir = pfs_readdir,
+	.releasedir = pfs_releasedir,	// Directories also need to be closed, or do they?
+	//.fsyncdir = pfs_fsyncdir,	//Can be called on root, probably
+	.init = pfs_init,	// These two are not necessarily useful
+	.destroy = pfs_destroy,
+	.access = pfs_access,	// default_permissions negates the need for this
+	//.create = pfs_create,	// No file creation
+	.ftruncate = pfs_ftruncate,	// Seems that this one can just call truncate
+	.fgetattr = pfs_fgetattr,	// The same
+	//.lock = pfs_lock,	//Implemented by kernel (not needed for local FS)
+	.utimens = pfs_utimens,	// Use utimensat
+	//.bmap = pfs_bmap,	// This FS is not backed by a device
+	.flag_nullpath_ok = 0,	// Files can not be removed, so we never work with them
+	.flag_nopath = 0,	// May be allowed, as file handles are probably enough
+	.flag_utime_omit_ok = 1,	// This will be proxied, so it is okay
+	//.ioctl = pfs_ioctl,
+	//.poll = pfs_poll,
+	//.write_buf = pfs_write_buf,	// Unclear that these do
+	//.read_buf = pfs_read_buf,
+	//.flock = pfs_flock,	//The same as lock()
+	//.fallocate = pfs_fallocate
+};
