@@ -15,9 +15,9 @@ DEPEXT      := d
 OBJEXT      := o
 
 #Flags, Libraries and Includes
-CFLAGS      := -Wall -O3
+CFLAGS      := -Wall -O3 $(shell pkg-config fuse --cflags) $(shell pkg-config glib-2.0 --cflags)
 LIB         := $(shell pkg-config fuse --libs) $(shell pkg-config glib-2.0 --libs)
-INC         := -I$(INCDIR) -I/usr/include $(shell pkg-config fuse --cflags) $(shell pkg-config glib-2.0 --cflags)
+INC         := -I$(INCDIR) -I/usr/include
 INCDEP      := -I$(INCDIR)
 
 #---------------------------------------------------------------------------------
