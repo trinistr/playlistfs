@@ -52,3 +52,38 @@ struct fuse_operations pfs_operations = {
 	//.flock = pfs_flock,	//The same as lock()
 	//.fallocate = pfs_fallocate
 };
+int main (int argc, char* argv[]) {
+	char** files = NULL;
+	GError* optionError = NULL;
+	GOptionEntry options[] = {
+		{ "file", 'f', G_OPTION_FLAG_NONE, G_OPTION_ARG_FILENAME_ARRAY, &files, "Add a single file to playlist", "FILE"},
+		{ }
+	};
+	GOptionEntry optionsFuse[] = {
+		{ "read-only", 'r', G_OPTION_FLAG_NONE, G_OPTION_ARG_NONE, "Mount file system as read-only", "" },
+		{ "no-exec", 'e', G_OPTION_FLAG_REVERSE, G_OPTION_ARG_NONE, "Do not allow execution of files", ""},
+		{ }
+	};
+	GOptionContext* optionContext = g_option_context_new ("PLAYLIST...");
+	GOptionGroup* optionsFuseGroup = g_option_group_new (
+		"fuse", "Options passed to FUSE", "FUSE options", NULL, NULL
+	);
+	g_option_group_set_translation_domain (optionsFuseGroup, NULL);
+	g_option_context_add_main_entries (optionContext, options, NULL);
+	g_option_context_add_group (optionContext, optionsFuseGroup);
+	g_option_group_add_entries (optionsFuseGroup, optionsFuse);
+	g_option_context_set_help_enabled (optionContext, TRUE);
+	if ( !g_option_context_parse (optionContext, &argc, &argv, &optionError) ) {
+		printf ("error: %s\n\n", optionError->message);
+		puts (g_option_context_get_help(optionContext, TRUE, NULL));
+		exit (1);
+	}
+	if (files) {
+		for (size_t i = 0; files[i]; i++) {
+			puts (files[i]);
+		}
+	}
+	for (int i = 0; i < argc; i++) {
+		puts (argv[i]);
+	}
+}
