@@ -76,7 +76,7 @@ static struct fuse_operations pfs_operations = {
 #define printinfof(x, s) {if(data->opts.verbose)fprintf(stderr, x "\n", s);}
 
 int main (int argc, char* argv[]) {
-	pfs_data* data = malloc (sizeof(*data));
+	pfs_data* data = calloc (sizeof(*data), 1);
 	if (!data) {
 		printerr ("memory allocation failed");
 		exit (EXIT_FAILURE);
