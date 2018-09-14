@@ -76,11 +76,145 @@ static struct fuse_operations pfs_operations = {
 #define printinfof(x, s) {if(data->opts.verbose)fprintf(stderr, x "\n", s);}
 
 int main (int argc, char* argv[]) {
-    pfs_options opts = {};
-    if (!pfs_parse_options (&opts, argc, argv)) {
-        exit (EXIT_FAILURE);
-    }
-    return EXIT_SUCCESS;
+	pfs_data data = {};
+	if (!pfs_parse_options (&data.opts, argc, argv)) {
+		exit (EXIT_FAILURE);
+	}
+	
+	data.filetable = g_hash_table_new_full (g_str_hash, g_str_equal, free, free);
+	if (!pfs_build_playlist (&data)) {
+		exit (EXIT_FAILURE);
+	}
+	return EXIT_SUCCESS;
+}
+
+gboolean pfs_build_playlist (pfs_data* data) {
+	char** lists = data->opts.lists;
+	char** files = data->opts.files;
+	GHashTable* table = data->filetable;
+	char* path = malloc(sizeof(*path) * PATH_MAX);
+	struct stat filestat;
+
+	if (lists != NULL) {
+		for (size_t ilist = 0; lists[ilist]; ilist++) {
+			FILE* list = fopen (lists[ilist], "rt");
+			if (list) {
+				printinfof ("Reading list '%s'", lists[ilist]);
+				while (fgets (path, PATH_MAX, list)) {
+					size_t length = strlen (path);
+					if (path[0] == '\n' || length == 0) {
+						continue;
+					}
+					else if (path[length - 1] == '\n') {
+						path[length - 1] = '\0';
+					}
+					else if (length == PATH_MAX-1) {
+						printwarn ("filename too long, ignoring");
+						while (fgetc(list) != '\n') {}
+						continue;
+					}
+					if (path[0] == '/') {
+						if (0 == stat (path, &filestat)) {
+							if (!S_ISDIR (filestat.st_mode)) {
+								char* name = strdup (basename (path));
+								char* saved_path = strdup (path);
+								if (!name || !saved_path) {
+									printerr ("memory allocation failed");
+									return FALSE;
+								}
+								g_hash_table_insert (table, name, saved_path);
+							}
+							else {
+								printwarnf ("file '%s' is a directory, ignoring", path);
+							}
+						}
+						else {
+							printwarnf ("file '%s' is inaccessible, ignoring", path);
+						}
+					}
+					else {
+						printwarnf ("path '%s' is not absolute, ignoring", path);
+					}
+				}
+				if (feof (list)) {
+					fclose (list);
+				}
+				else {
+					printwarnf ("error when reading list '%s'", lists[ilist]);
+				}
+			}
+			else {
+				printwarnf ("list '%s' could not be opened", lists[ilist]);
+			}
+		}
+	}
+
+	if (files != NULL) {
+		printinfo ("Adding individual files");
+		size_t cwdlength;
+		if (getcwd (path, PATH_MAX) && path[0] == '/') {
+			cwdlength = strlen (path);
+			if (path[cwdlength-1] != '/') {
+				path[cwdlength++] = '/';
+			}
+		}
+		else {
+			printerr ("could not get current working directory, relative filenames will be ignored");
+			cwdlength = 0;
+		}
+		for (size_t ifile = 0; files[ifile]; ifile++) {
+			char* saved_path;
+			if (files[ifile][0] != '/') {
+				if (cwdlength) {
+					size_t length = strlen(files[ifile]);
+					if (length > 0) {
+						if (cwdlength + length <= PATH_MAX) {
+							strcpy (path+cwdlength, files[ifile]);
+							saved_path = strdup (path);
+							if (!saved_path) {
+								printerr ("memory allocation failed");
+								return FALSE;
+							}
+						}
+						else {
+							printwarn ("filename too long, ignoring");
+							continue;
+						}
+					}
+					else {
+						printwarn ("empty filename");
+						continue;
+					}
+				}
+				else {
+					printwarnf ("Ignoring file '%s'", files[ifile]);
+					continue;
+				}
+				
+			}
+			else {
+				saved_path = files[ifile];
+			}
+			if (0 == stat (saved_path, &filestat)) {
+				if (!S_ISDIR (filestat.st_mode)) {
+					char* name = strdup (basename (path));
+					if (!name) {
+						printerr ("memory allocation failed");
+						return FALSE;
+					}
+					g_hash_table_insert (table, name, saved_path);
+				}
+				else {
+					printwarnf ("file '%s' is a directory, ignoring", files[ifile]);
+				}
+			}
+			else {
+				printwarnf ("file '%s' is inaccessible, ignoring", files[ifile]);
+			}
+		}
+	}
+
+	return TRUE;
 }
 
 gboolean pfs_parse_options (pfs_options* opts, int argc, char* argv[]) {
