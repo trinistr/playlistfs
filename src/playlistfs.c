@@ -16,7 +16,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "playlistfs.h"
+#include <playlistfs.h>
 
 // Allowed operations. Unused ones are commented out,
 // deprecated are not listed at all

@@ -5,8 +5,8 @@ CC          := gcc
 TARGET      := playlistfs
 
 #The Directories, Source, Includes, Objects and Binary
-SRCDIR      := .
-INCDIR      := .
+SRCDIR      := src
+INCDIR      := include
 BUILDDIR    := obj
 TARGETDIR   := .
 SRCEXT      := c
