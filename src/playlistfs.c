@@ -240,8 +240,9 @@ gboolean pfs_parse_options (pfs_options* opts, int argc, char* argv[]) {
 	};
 	GOptionEntry optionsFuse[] = {
 		{ "read-only", 'r', G_OPTION_FLAG_NONE, G_OPTION_ARG_NONE, &opts->fuse.ro, "Mount file system as read-only", NULL},
-		{ "noexec", 0, G_OPTION_FLAG_REVERSE, G_OPTION_ARG_NONE, &opts->fuse.noexec, "Do not allow execution of files", NULL},
-		{ "noatime", 0, G_OPTION_FLAG_REVERSE, G_OPTION_ARG_NONE, &opts->fuse.noatime, "Do not update time of access", NULL},
+		{ "noexec", 0, G_OPTION_FLAG_NONE, G_OPTION_ARG_NONE, &opts->fuse.noexec, "Do not allow execution of files", NULL},
+		{ "noatime", 0, G_OPTION_FLAG_NONE, G_OPTION_ARG_NONE, &opts->fuse.noatime, "Do not update time of access", NULL},
+		{ "debug", 'd', G_OPTION_FLAG_NONE, G_OPTION_ARG_NONE, &opts->fuse.debug, "Enable debugging mode", NULL},
 		{}
 	};
 	GOptionContext* optionContext = g_option_context_new ("LIST... [DIR]");
