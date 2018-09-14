@@ -14,7 +14,12 @@ DEPEXT      := d
 OBJEXT      := o
 
 #Flags, Libraries and Includes
-CFLAGS      := -Wall -O3 $(shell pkg-config fuse --cflags) $(shell pkg-config glib-2.0 --cflags)
+DEBUG ?= 1
+ifeq ($(DEBUG), 1)
+    CFLAGS  := -Wall -ggdb -O0 --std=c11 $(shell pkg-config fuse --cflags) $(shell pkg-config glib-2.0 --cflags)
+else
+    CFLAGS  := -Wall -O3 --std=c11 $(shell pkg-config fuse --cflags) $(shell pkg-config glib-2.0 --cflags)
+endif 
 LIB         := $(shell pkg-config fuse --libs) $(shell pkg-config glib-2.0 --libs)
 INC         := -I$(INCDIR) -I/usr/include
 INCDEP      := -I$(INCDIR)
