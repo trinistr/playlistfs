@@ -91,7 +91,37 @@ int main (int argc, char* argv[]) {
 		exit (EXIT_FAILURE);
 	}
 	
-	if (!fuse_main (1, argv, &pfs_operations, data)) {
+	char** fuse_argv = malloc (sizeof (*fuse_argv) * 16);
+	size_t fuse_argc = 0;
+	fuse_argv[fuse_argc++] = argv[0];
+	fuse_argv[fuse_argc++] = data->opts.mount_point;
+	fuse_argv[fuse_argc++] = "-odefault_permissions";
+	fuse_argv[fuse_argc] = malloc (11 + strlen (data->opts.lists[0]) + 1);
+	sprintf (fuse_argv[fuse_argc++], "-ofsname='%s'", data->opts.lists[0]);
+	//fuse_argv[fuse_argc++] = "-ofsname=playlistfs";
+	fuse_argv[fuse_argc++] = "-osubtype=playlistfs";
+	printinfo ("Passing options to FUSE:");
+	if (data->opts.fuse.debug) {
+		fuse_argv[fuse_argc++] = "-d";
+		printinfo ("\t-d (debug mode)");
+	}
+	if (data->opts.fuse.ro) {
+		fuse_argv[fuse_argc++] = "-r";
+		printinfo ("\t-r (read-only mode)");
+	}
+	if (data->opts.fuse.noatime) {
+		fuse_argv[fuse_argc++] = "-onoatime";
+		printinfo ("\t-o noatime (do not update access time)");
+	}
+	if (data->opts.fuse.noexec) {
+		fuse_argv[fuse_argc++] = "-onoexec";
+		printinfo ("\t-o noexec (do not allow execution)");
+	}
+	if ( !(data->opts.fuse.debug || data->opts.fuse.ro
+			|| data->opts.fuse.noatime || data->opts.fuse.noexec) )
+		printinfo ("\tno options to pass");
+	
+	if (!fuse_main (fuse_argc, fuse_argv, &pfs_operations, data)) {
 		printerr ("calling FUSE failed");
 		exit (EXIT_FAILURE);
 	}
