@@ -1,0 +1,5 @@
+playlistfs
+*.o
+*.d
+*.gch
+*.pch
