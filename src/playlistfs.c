@@ -76,7 +76,7 @@ static struct fuse_operations pfs_operations = {
 #define printinfof(x, s) {if(data->opts.verbose)fprintf(stderr, x "\n", s);}
 
 int main (int argc, char* argv[]) {
-	pfs_data* data = calloc (sizeof(*data), 1);
+	pfs_data* data = calloc (1, sizeof (*data));
 	if (!data) {
 		printerr ("memory allocation failed");
 		exit (EXIT_FAILURE);
@@ -133,7 +133,7 @@ gboolean pfs_build_playlist (pfs_data* data) {
 	char** lists = data->opts.lists;
 	char** files = data->opts.files;
 	GHashTable* table = data->filetable;
-	char* path = malloc(sizeof(*path) * PATH_MAX);
+	char* path = malloc (sizeof (*path) * PATH_MAX);
 	struct stat filestat;
 
 	if (lists != NULL) {
@@ -149,7 +149,7 @@ gboolean pfs_build_playlist (pfs_data* data) {
 					else if (path[length - 1] == '\n') {
 						path[length - 1] = '\0';
 					}
-					else if (length == PATH_MAX-1) {
+					else if (length == PATH_MAX - 1) {
 						printwarn ("filename too long, ignoring");
 						while (fgetc(list) != '\n') {}
 						continue;
@@ -183,6 +183,7 @@ gboolean pfs_build_playlist (pfs_data* data) {
 				else {
 					printwarnf ("error when reading list '%s'", lists[ilist]);
 				}
+				printinfof ("Done with list '%s'", lists[ilist]);
 			}
 			else {
 				printwarnf ("list '%s' could not be opened", lists[ilist]);
@@ -191,11 +192,11 @@ gboolean pfs_build_playlist (pfs_data* data) {
 	}
 
 	if (files != NULL) {
-		printinfo ("Adding individual files");
+		printinfo ("Adding individual files:");
 		size_t cwdlength;
 		if (getcwd (path, PATH_MAX) && path[0] == '/') {
 			cwdlength = strlen (path);
-			if (path[cwdlength-1] != '/') {
+			if (path[cwdlength - 1] != '/') {
 				path[cwdlength++] = '/';
 			}
 		}
@@ -207,15 +208,16 @@ gboolean pfs_build_playlist (pfs_data* data) {
 			char* saved_path;
 			if (files[ifile][0] != '/') {
 				if (cwdlength) {
-					size_t length = strlen(files[ifile]);
+					size_t length = strlen (files[ifile]);
 					if (length > 0) {
 						if (cwdlength + length <= PATH_MAX) {
-							strcpy (path+cwdlength, files[ifile]);
+							strcpy (path + cwdlength, files[ifile]);
 							saved_path = strdup (path);
 							if (!saved_path) {
 								printerr ("memory allocation failed");
 								return FALSE;
 							}
+							if (data->opts.verbose) fprintf (stderr, "\t%s -> %s\n", files[ifile], saved_path);
 						}
 						else {
 							printwarn ("filename too long, ignoring");
@@ -231,10 +233,11 @@ gboolean pfs_build_playlist (pfs_data* data) {
 					printwarnf ("Ignoring file '%s'", files[ifile]);
 					continue;
 				}
-				
+
 			}
 			else {
-				saved_path = strdup(files[ifile]);
+				saved_path = strdup (files[ifile]);
+				printinfof ("\t%s", saved_path);
 			}
 			if (0 == stat (saved_path, &filestat)) {
 				if (!S_ISDIR (filestat.st_mode)) {
@@ -301,8 +304,8 @@ gboolean pfs_parse_options (pfs_options* opts, int argc, char* argv[]) {
 	}
 	{
 		struct stat mountstat;
-		if (0 == stat(opts->mount_point, &mountstat)) {
-			if (!S_ISDIR(mountstat.st_mode)) {
+		if (0 == stat (opts->mount_point, &mountstat)) {
+			if (!S_ISDIR (mountstat.st_mode)) {
 				printerr ("target is not a suitable mount point");
 				return FALSE;
 			}
