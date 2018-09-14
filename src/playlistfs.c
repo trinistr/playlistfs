@@ -76,13 +76,23 @@ static struct fuse_operations pfs_operations = {
 #define printinfof(x, s) {if(data->opts.verbose)fprintf(stderr, x "\n", s);}
 
 int main (int argc, char* argv[]) {
-	pfs_data data = {};
-	if (!pfs_parse_options (&data.opts, argc, argv)) {
+	pfs_data* data = malloc (sizeof(*data));
+	if (!data) {
+		printerr ("memory allocation failed");
 		exit (EXIT_FAILURE);
 	}
 	
-	data.filetable = g_hash_table_new_full (g_str_hash, g_str_equal, free, free);
-	if (!pfs_build_playlist (&data)) {
+	if (!pfs_parse_options (&data->opts, argc, argv)) {
+		exit (EXIT_FAILURE);
+	}
+	
+	data->filetable = g_hash_table_new_full (g_str_hash, g_str_equal, free, free);
+	if (!pfs_build_playlist (data)) {
+		exit (EXIT_FAILURE);
+	}
+	
+	if (!fuse_main (1, argv, &pfs_operations, data)) {
+		printerr ("calling FUSE failed");
 		exit (EXIT_FAILURE);
 	}
 	
