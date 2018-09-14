@@ -19,7 +19,7 @@
 #define PLAYLISTFS_H
 
 #define FUSE_USE_VERSION 26
-#define _XOPEN_SOURCE 500	//_POSIX_C_SOURCE 200809L
+#define _XOPEN_SOURCE 700	//_POSIX_C_SOURCE 200809L
 #define _GNU_SOURCE
 
 #include <string.h>
@@ -30,6 +30,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <errno.h>
 
 typedef struct {
     char** files;
@@ -56,6 +57,7 @@ void* pfs_init (struct fuse_conn_info *conn);
 void pfs_destroy (void *);
 int pfs_getattr (const char *, struct stat *);
 int pfs_readlink (const char *, char *, size_t);
+int pfs_unlink (const char *);
 int pfs_rename (const char *, const char *);
 int pfs_link (const char *, const char *);
 int pfs_truncate (const char *, off_t);

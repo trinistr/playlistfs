@@ -26,7 +26,7 @@ static struct fuse_operations pfs_operations = {
 	//.mknod = pfs_mknod,	// No file creation. Regular files should use .create
 	//.mkdir = pfs_mkdir,
 	//.rmdir = pfs_rmdir,
-	//.unlink = pfs_unlink,
+	.unlink = pfs_unlink,
 	//.symlink = pfs_symlink,
 	.rename = pfs_rename,
 	//.link = pfs_link,
@@ -36,7 +36,7 @@ static struct fuse_operations pfs_operations = {
 	.open = pfs_open,
 	.read = pfs_read,
 	.write = pfs_write,
-	.statfs = pfs_statfs,	// = statvfs
+	//.statfs = pfs_statfs,	// = statvfs
 	//.flush = pfs_flush,
 	.release = pfs_release,	// Files need to be closed
 	.fsync = pfs_fsync,
@@ -204,7 +204,7 @@ gboolean pfs_build_playlist (pfs_data* data) {
 				
 			}
 			else {
-				saved_path = files[ifile];
+				saved_path = strdup(files[ifile]);
 			}
 			if (0 == stat (saved_path, &filestat)) {
 				if (!S_ISDIR (filestat.st_mode)) {
