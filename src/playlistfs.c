@@ -36,7 +36,7 @@ static struct fuse_operations pfs_operations = {
 	.open = pfs_open,
 	.read = pfs_read,
 	.write = pfs_write,
-	//.statfs = pfs_statfs,	// = statvfs
+	.statfs = pfs_statfs,	// = statvfs
 	//.flush = pfs_flush,
 	.release = pfs_release,	// Files need to be closed
 	.fsync = pfs_fsync,
@@ -48,7 +48,7 @@ static struct fuse_operations pfs_operations = {
 	.readdir = pfs_readdir,
 	.releasedir = pfs_releasedir,	// Directories also need to be closed, or do they?
 	//.fsyncdir = pfs_fsyncdir,	//Can be called on root, probably
-	.init = pfs_init,	// These two are not necessarily useful
+	//.init = pfs_init,	// These two are not necessarily useful
 	.destroy = pfs_destroy,
 	.access = pfs_access,	// default_permissions negates the need for this
 	//.create = pfs_create,	// No file creation
