@@ -4,12 +4,11 @@ CC          := gcc
 #The Target Binary Program
 TARGET      := playlistfs
 
-#The Directories, Source, Includes, Objects, Binary and Resources
+#The Directories, Source, Includes, Objects and Binary
 SRCDIR      := .
 INCDIR      := .
 BUILDDIR    := obj
 TARGETDIR   := .
-RESDIR      := res
 SRCEXT      := c
 DEPEXT      := d
 OBJEXT      := o
@@ -27,14 +26,10 @@ SOURCES     := $(shell find $(SRCDIR) -type f -name *.$(SRCEXT))
 OBJECTS     := $(patsubst $(SRCDIR)/%,$(BUILDDIR)/%,$(SOURCES:.$(SRCEXT)=.$(OBJEXT)))
 
 #Default Make
-all: resources $(TARGET)
+all: $(TARGET)
 
 #Remake
 remake: cleaner all
-
-#Copy Resources from Resources Directory to Target Directory
-resources: directories
-#	@cp $(RESDIR)/* $(TARGETDIR)/
 
 #Make the Directories
 directories:
@@ -47,7 +42,7 @@ clean:
 
 #Full Clean, Objects and Binaries
 cleaner: clean
-	@$(RM) -rf $(TARGETDIR)
+	@$(RM) $(TARGET)
 
 #Pull in dependency info for *existing* .o files
 -include $(OBJECTS:.$(OBJEXT)=.$(DEPEXT))
