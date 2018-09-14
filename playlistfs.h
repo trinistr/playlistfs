@@ -20,16 +20,24 @@
 
 #define FUSE_USE_VERSION 26
 #define _XOPEN_SOURCE 500	//_POSIX_C_SOURCE 200809L
+#define _GNU_SOURCE
 
+#include <string.h>
 #include <fuse.h>
 #include <glib.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
 
 typedef struct {
-    guchar** files;
-    guchar** playlists;
+    char** files;
+    char** lists;
+    char* mount_point;
     gboolean symlink;
+    gboolean verbose;
+    gboolean quiet;
     struct {
         gboolean ro;
         gboolean noexec;
@@ -37,7 +45,13 @@ typedef struct {
     } fuse;
 } pfs_options;
 
+typedef struct {
+    pfs_options opts;
+    GHashTable* filetable;
+} pfs_data;
+
 gboolean pfs_parse_options (pfs_options* opts, int argc, char* argv[]);
+gboolean pfs_build_playlist (pfs_data* data);
 void* pfs_init (struct fuse_conn_info *conn);
 void pfs_destroy (void *);
 int pfs_getattr (const char *, struct stat *);
