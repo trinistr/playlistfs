@@ -238,7 +238,7 @@ gboolean pfs_build_playlist (pfs_data* data) {
 			}
 			if (0 == stat (saved_path, &filestat)) {
 				if (!S_ISDIR (filestat.st_mode)) {
-					char* name = strdup (basename (path));
+					char* name = strdup (basename (files[ifile]));
 					if (!name) {
 						printerr ("memory allocation failed");
 						return FALSE;
