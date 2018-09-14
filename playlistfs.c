@@ -85,6 +85,7 @@ int main (int argc, char* argv[]) {
 	if (!pfs_build_playlist (&data)) {
 		exit (EXIT_FAILURE);
 	}
+	
 	return EXIT_SUCCESS;
 }
 
@@ -218,35 +219,68 @@ gboolean pfs_build_playlist (pfs_data* data) {
 }
 
 gboolean pfs_parse_options (pfs_options* opts, int argc, char* argv[]) {
-    GError* optionError = NULL;
-    GOptionEntry options[] = {
-        { "file", 'f', G_OPTION_FLAG_NONE, G_OPTION_ARG_FILENAME_ARRAY, &opts->files, "Add a single file to playlist", "FILE" },
-        { "symlink", 's', G_OPTION_FLAG_NONE, G_OPTION_ARG_NONE, &opts->symlink, "Create symlinks instead of regular files", NULL },
-        { }
-    };
-    GOptionEntry optionsFuse[] = {
-        { "read-only", 'r', G_OPTION_FLAG_NONE, G_OPTION_ARG_NONE, &opts->fuse.ro, "Mount file system as read-only", NULL },
-        { "noexec", 0, G_OPTION_FLAG_REVERSE, G_OPTION_ARG_NONE, &opts->fuse.noexec, "Do not allow execution of files", NULL },
-        { "noatime", 0, G_OPTION_FLAG_REVERSE, G_OPTION_ARG_NONE, &opts->fuse.noatime, "Do not update time of access", NULL },
-        { }
-    };
-    GOptionContext* optionContext = g_option_context_new ("PLAYLIST...");
-    GOptionGroup* optionsFuseGroup = g_option_group_new (
-        "fuse", "Options passed to FUSE", "FUSE options", NULL, NULL
-    );
-    g_option_group_set_translation_domain (optionsFuseGroup, NULL);
-    g_option_context_add_main_entries (optionContext, options, NULL);
-    g_option_context_add_group (optionContext, optionsFuseGroup);
-    g_option_group_add_entries (optionsFuseGroup, optionsFuse);
-    g_option_context_set_help_enabled (optionContext, TRUE);
-    if ( !g_option_context_parse (optionContext, &argc, &argv, &optionError) ) {
-        printf ("error: %s\n\n", optionError->message);
-        puts (g_option_context_get_help(optionContext, TRUE, NULL));
-        return FALSE;
-    }
-    opts->playlists = (guchar**) malloc (sizeof(guchar*) * (argc-1));
-    for (int i = 1; i < argc; i++) {
-	opts->playlists[i-1] = argv[i];
-    }    
-    return TRUE;
+	GError* optionError = NULL;
+	GOptionEntry options[] = {
+		{ "target", 't', G_OPTION_FLAG_NONE, G_OPTION_ARG_FILENAME, &opts->mount_point, "Set mount point explicitly", "DIR"},
+		{ "file", 'f', G_OPTION_FLAG_NONE, G_OPTION_ARG_FILENAME_ARRAY, &opts->files, "Add a single file to playlist", "FILE"},
+		{ "symlink", 's', G_OPTION_FLAG_NONE, G_OPTION_ARG_NONE, &opts->symlink, "Create symlinks instead of regular files", NULL},
+		{ "verbose", 'v', G_OPTION_FLAG_NONE, G_OPTION_ARG_NONE, &opts->verbose, "Describe what is happening", NULL},
+		{ "quiet", 'q', G_OPTION_FLAG_NONE, G_OPTION_ARG_NONE, &opts->quiet, "Suppress warnings", NULL},
+		{}
+	};
+	GOptionEntry optionsFuse[] = {
+		{ "read-only", 'r', G_OPTION_FLAG_NONE, G_OPTION_ARG_NONE, &opts->fuse.ro, "Mount file system as read-only", NULL},
+		{ "noexec", 0, G_OPTION_FLAG_REVERSE, G_OPTION_ARG_NONE, &opts->fuse.noexec, "Do not allow execution of files", NULL},
+		{ "noatime", 0, G_OPTION_FLAG_REVERSE, G_OPTION_ARG_NONE, &opts->fuse.noatime, "Do not update time of access", NULL},
+		{}
+	};
+	GOptionContext* optionContext = g_option_context_new ("LIST... [DIR]");
+	GOptionGroup* optionsFuseGroup = g_option_group_new (
+			"fuse", "Options passed to FUSE", "FUSE options", NULL, NULL
+			);
+
+	g_option_context_add_main_entries (optionContext, options, NULL);
+	g_option_context_add_group (optionContext, optionsFuseGroup);
+	g_option_group_add_entries (optionsFuseGroup, optionsFuse);
+	g_option_context_set_help_enabled (optionContext, TRUE);
+
+	if (!g_option_context_parse (optionContext, &argc, &argv, &optionError)) {
+		printerrf ("%s", optionError->message);
+		fputs (g_option_context_get_help (optionContext, TRUE, NULL), stderr);
+		return FALSE;
+	}
+	g_option_context_free (optionContext);
+
+	if (opts->mount_point == NULL) {
+		if (argc == 1) {
+			printerr ("no target mount point");
+			return FALSE;
+		}
+		opts->mount_point = argv[--argc];
+	}
+	{
+		struct stat mountstat;
+		if (0 == stat(opts->mount_point, &mountstat)) {
+			if (!S_ISDIR(mountstat.st_mode)) {
+				printerr ("target is not a suitable mount point");
+				return FALSE;
+			}
+		}
+		else {
+			printerr ("target is not accessible");
+			return FALSE;
+		}
+	}
+	if (argc > 1) {
+		opts->lists = malloc (sizeof (*opts->lists) * argc);
+		if (!opts->lists) {
+			printerr ("memory allocation failed");
+			return FALSE;
+		}
+		for (int i = 1; i < argc; i++) {
+			opts->lists[i - 1] = argv[i];
+		}
+		opts->lists[argc - 1] = NULL;
+	}
+	return TRUE;
 }
