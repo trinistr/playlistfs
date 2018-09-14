@@ -68,6 +68,13 @@ static struct fuse_operations pfs_operations = {
 	//.fallocate = pfs_fallocate
 };
 
+#define printwarn(x) {if(!data->opts.quiet)fputs("warning: " x "\n", stderr);}
+#define printwarnf(x, s) {if(!data->opts.quiet)fprintf(stderr, "warning: " x "\n", s);}
+#define printerr(x) fputs("error: " x "\n", stderr)
+#define printerrf(x, s) fprintf(stderr, "error: " x "\n", s)
+#define printinfo(x) {if(data->opts.verbose)fputs(x "\n", stderr);}
+#define printinfof(x, s) {if(data->opts.verbose)fprintf(stderr, x "\n", s);}
+
 int main (int argc, char* argv[]) {
     pfs_options opts = {};
     if (!pfs_parse_options (&opts, argc, argv)) {
