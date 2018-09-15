@@ -91,15 +91,40 @@ int main (int argc, char* argv[]) {
 		exit (EXIT_FAILURE);
 	}
 	
+	int fuse_argc = 0;
+	char** fuse_argv = NULL;
+	if (!pfs_setup_fuse_arguments (&fuse_argc, &fuse_argv, argv[0], data)) {
+		exit (EXIT_FAILURE);
+	}
+	
+	if (!fuse_main (fuse_argc, fuse_argv, &pfs_operations, data)) {
+		printerr ("calling FUSE failed");
+		exit (EXIT_FAILURE);
+	}
+	
+	return EXIT_SUCCESS;
+}
+
+gboolean pfs_setup_fuse_arguments (int* argc, char** argv[], char* pfs_name, pfs_data* data) {
+	int fuse_argc = 0;
 	char** fuse_argv = malloc (sizeof (*fuse_argv) * 16);
-	size_t fuse_argc = 0;
-	fuse_argv[fuse_argc++] = argv[0];
+	if(!fuse_argv) {
+		printerr ("memory allocation failed");
+		return FALSE;
+	}
+	
+	fuse_argv[fuse_argc++] = pfs_name;
 	fuse_argv[fuse_argc++] = data->opts.mount_point;
 	fuse_argv[fuse_argc++] = "-odefault_permissions";
+	fuse_argv[fuse_argc++] = "-osubtype=playlistfs";
 	fuse_argv[fuse_argc] = malloc (11 + strlen (data->opts.lists[0]) + 1);
+	if(!fuse_argv[fuse_argc]) {
+		printerr ("memory allocation failed");
+		free (fuse_argv);
+		return FALSE;
+	}
 	sprintf (fuse_argv[fuse_argc++], "-ofsname='%s'", data->opts.lists[0]);
 	//fuse_argv[fuse_argc++] = "-ofsname=playlistfs";
-	fuse_argv[fuse_argc++] = "-osubtype=playlistfs";
 	printinfo ("Passing options to FUSE:");
 	if (data->opts.fuse.debug) {
 		fuse_argv[fuse_argc++] = "-d";
@@ -121,12 +146,9 @@ int main (int argc, char* argv[]) {
 			|| data->opts.fuse.noatime || data->opts.fuse.noexec) )
 		printinfo ("\tno options to pass");
 	
-	if (!fuse_main (fuse_argc, fuse_argv, &pfs_operations, data)) {
-		printerr ("calling FUSE failed");
-		exit (EXIT_FAILURE);
-	}
-	
-	return EXIT_SUCCESS;
+	*argc = fuse_argc;
+	*argv = fuse_argv;
+	return TRUE;
 }
 
 gboolean pfs_build_playlist (pfs_data* data) {

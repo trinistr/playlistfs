@@ -54,6 +54,7 @@ typedef struct {
 
 gboolean pfs_parse_options (pfs_options* opts, int argc, char* argv[]);
 gboolean pfs_build_playlist (pfs_data* data);
+gboolean pfs_setup_fuse_arguments (int* fuse_argc, char** fuse_argv[], char* pfs_name, pfs_data* data);
 void* pfs_init (struct fuse_conn_info *conn);
 void pfs_destroy (void *);
 int pfs_getattr (const char *, struct stat *);
