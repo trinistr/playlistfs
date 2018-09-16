@@ -54,15 +54,15 @@ typedef struct {
 
 typedef struct {
 	char* path;
+	__mode_t type;
 	char nlinks;
-	char type;
 } pfs_file;
 
 gboolean pfs_parse_options (pfs_options* opts, int argc, char* argv[]);
 gboolean pfs_build_playlist (pfs_data* data);
 gboolean pfs_setup_fuse_arguments (int* fuse_argc, char** fuse_argv[], char* pfs_name, pfs_data* data);
 
-pfs_file* pfs_file_create (char* path, char type);
+pfs_file* pfs_file_create (char* path, __mode_t mode);
 void pfs_file_free (pfs_file*);
 
 void* pfs_init (struct fuse_conn_info *conn);

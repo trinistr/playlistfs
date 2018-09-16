@@ -18,13 +18,17 @@
 
 #include <playlistfs.h>
 
-pfs_file* pfs_file_create (char* path, char type) {
+pfs_file* pfs_file_create (char* path, __mode_t mode) {
 	pfs_file* file = malloc (sizeof(*file));
 	if (!file)
 		return NULL;
-	file->path = path;
-	file->type = type;
-	file->nlinks = type == 'd' ? 2 : 1;
+	file->path = strdup(path);
+	if (!file->path) {
+		free (file);
+		return NULL;
+	}
+	file->type = mode&S_IFMT;
+	file->nlinks = (mode&S_IFMT) == S_IFDIR ? 2 : 1;
 	return file;
 }
 
