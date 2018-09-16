@@ -185,6 +185,8 @@ gboolean pfs_build_playlist (pfs_data* data) {
 									printerr ("memory allocation failed");
 									return FALSE;
 								}
+								// Ensure that we don't leak memory on duplicate keys
+								g_hash_table_remove (table, name);
 								g_hash_table_insert (table, name, saved_path);
 							}
 							else {
@@ -268,6 +270,7 @@ gboolean pfs_build_playlist (pfs_data* data) {
 						printerr ("memory allocation failed");
 						return FALSE;
 					}
+					g_hash_table_remove (table, name);
 					g_hash_table_insert (table, name, saved_path);
 				}
 				else {
