@@ -64,6 +64,7 @@ gboolean pfs_setup_fuse_arguments (int* fuse_argc, char** fuse_argv[], char* pfs
 
 pfs_file* pfs_file_create (char* path, __mode_t mode);
 void pfs_file_free (pfs_file*);
+void pfs_file_free_void (void*);
 
 void* pfs_init (struct fuse_conn_info *conn);
 void pfs_destroy (void *);
