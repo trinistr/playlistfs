@@ -86,7 +86,7 @@ int main (int argc, char* argv[]) {
 		exit (EXIT_FAILURE);
 	}
 	
-	data->filetable = g_hash_table_new_full (g_str_hash, g_str_equal, free, free);
+	data->filetable = g_hash_table_new_full (g_str_hash, g_str_equal, free, pfs_file_free);
 	if (!pfs_build_playlist (data)) {
 		exit (EXIT_FAILURE);
 	}
@@ -157,6 +157,7 @@ gboolean pfs_build_playlist (pfs_data* data) {
 	GHashTable* table = data->filetable;
 	char* path = malloc (sizeof (*path) * PATH_MAX);
 	struct stat filestat;
+	pfs_file* saved_file;
 
 	if (lists != NULL) {
 		for (size_t ilist = 0; lists[ilist]; ilist++) {
@@ -176,18 +177,23 @@ gboolean pfs_build_playlist (pfs_data* data) {
 						while (fgetc(list) != '\n') {}
 						continue;
 					}
+					
 					if (path[0] == '/') {
 						if (0 == stat (path, &filestat)) {
 							if (!S_ISDIR (filestat.st_mode)) {
 								char* name = strdup (basename (path));
-								char* saved_path = strdup (path);
-								if (!name || !saved_path) {
+								saved_file = pfs_file_create (path, filestat.st_mode);
+								if (!name || !saved_file) {
 									printerr ("memory allocation failed");
+									if (name)
+										free (name);
+									if (saved_file)
+										pfs_file_free (saved_file);
 									return FALSE;
 								}
 								// Ensure that we don't leak memory on duplicate keys
 								g_hash_table_remove (table, name);
-								g_hash_table_insert (table, name, saved_path);
+								g_hash_table_insert (table, name, saved_file);
 							}
 							else {
 								printwarnf ("file '%s' is a directory, ignoring", path);
@@ -201,6 +207,7 @@ gboolean pfs_build_playlist (pfs_data* data) {
 						printwarnf ("path '%s' is not absolute, ignoring", path);
 					}
 				}
+				
 				if (feof (list)) {
 					fclose (list);
 				}
@@ -228,20 +235,20 @@ gboolean pfs_build_playlist (pfs_data* data) {
 			printerr ("could not get current working directory, relative filenames will be ignored");
 			cwdlength = 0;
 		}
+		
 		for (size_t ifile = 0; files[ifile]; ifile++) {
-			char* saved_path;
 			if (files[ifile][0] != '/') {
 				if (cwdlength) {
 					size_t length = strlen (files[ifile]);
 					if (length > 0) {
 						if (cwdlength + length <= PATH_MAX) {
 							strcpy (path + cwdlength, files[ifile]);
-							saved_path = strdup (path);
-							if (!saved_path) {
+							saved_file = pfs_file_create (path, 0);
+							if (!saved_file) {
 								printerr ("memory allocation failed");
 								return FALSE;
 							}
-							if (data->opts.verbose) fprintf (stderr, "\t%s -> %s\n", files[ifile], saved_path);
+							if (data->opts.verbose) fprintf (stderr, "\t%s -> %s\n", files[ifile], path);
 						}
 						else {
 							printwarn ("filename too long, ignoring");
@@ -260,25 +267,32 @@ gboolean pfs_build_playlist (pfs_data* data) {
 
 			}
 			else {
-				saved_path = strdup (files[ifile]);
-				printinfof ("\t%s", saved_path);
+				saved_file = pfs_file_create (files[ifile], 0);
+				printinfof ("\t%s", saved_file->path);
 			}
-			if (0 == stat (saved_path, &filestat)) {
+			
+			if (0 == stat (saved_file->path, &filestat)) {
 				if (!S_ISDIR (filestat.st_mode)) {
 					char* name = strdup (basename (files[ifile]));
 					if (!name) {
 						printerr ("memory allocation failed");
+						pfs_file_free(saved_file);
 						return FALSE;
 					}
+					saved_file->type = filestat.st_mode&S_IFMT;
+					if ((filestat.st_mode&S_IFMT) == S_IFDIR)
+						saved_file->nlinks = 2;
 					g_hash_table_remove (table, name);
-					g_hash_table_insert (table, name, saved_path);
+					g_hash_table_insert (table, name, saved_file);
 				}
 				else {
 					printwarnf ("file '%s' is a directory, ignoring", files[ifile]);
+					pfs_file_free(saved_file);
 				}
 			}
 			else {
 				printwarnf ("file '%s' is inaccessible, ignoring", files[ifile]);
+				pfs_file_free(saved_file);
 			}
 		}
 	}
