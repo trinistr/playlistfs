@@ -57,15 +57,15 @@ static struct fuse_operations pfs_operations = {
 	//.lock = pfs_lock,	// Implemented by kernel (not needed for local FS)
 	.utimens = pfs_utimens,	// Use utimensat
 	//.bmap = pfs_bmap,	// This FS is not backed by a device
-	.flag_nullpath_ok = 0,	// Files can not be removed, so we never work with them
-	.flag_nopath = 0,	// May be allowed, as file handles are probably enough
-	.flag_utime_omit_ok = 1,	// This will be proxied, so it is okay
 	//.ioctl = pfs_ioctl,
 	//.poll = pfs_poll,
 	//.write_buf = pfs_write_buf,	// Unclear that these do
 	//.read_buf = pfs_read_buf,
 	//.flock = pfs_flock,	//The same as lock()
-	//.fallocate = pfs_fallocate
+	.fallocate = pfs_fallocate,
+	.flag_nullpath_ok = 0,	// Files can not be removed, so we never work with them
+	.flag_nopath = 0,	// May be allowed, as file handles are probably enough
+	.flag_utime_omit_ok = 1,	// This will be proxied, so it is okay
 };
 
 #define printwarn(x) {if(!data->opts.quiet)fputs("warning: " x "\n", stderr);}

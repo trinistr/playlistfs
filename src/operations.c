@@ -235,3 +235,10 @@ int pfs_utimens (const char* path, const struct timespec tv[2]) {
 		return -errno;
 	return 0;
 }
+
+int pfs_fallocate (const char* path, int mode, off_t offset, off_t length, struct fuse_file_info* fi) {
+	fputs("\nALLOCATE\n", stderr);
+	if (fallocate (fi->fh, mode, offset, length) < 0)
+		return -errno;
+	return 0;
+}

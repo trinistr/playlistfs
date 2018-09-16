@@ -88,5 +88,6 @@ int pfs_access (const char *, int);
 int pfs_ftruncate (const char *, off_t, struct fuse_file_info *);
 int pfs_fgetattr (const char *, struct stat *, struct fuse_file_info *);
 int pfs_utimens (const char *, const struct timespec tv[2]);
+int pfs_fallocate (const char *, int, off_t, off_t, struct fuse_file_info *);
 
 #endif // PLAYLISTFS_H
