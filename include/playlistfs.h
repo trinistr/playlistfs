@@ -19,8 +19,8 @@
 #define PLAYLISTFS_H
 
 #define FUSE_USE_VERSION 26
-#define _XOPEN_SOURCE 700	//_POSIX_C_SOURCE 200809L
-#define _GNU_SOURCE
+#define _XOPEN_SOURCE 700	// Several functions, including pread and pwrite
+#define _GNU_SOURCE	// GNU basename()
 
 #include <string.h>
 #include <fuse.h>
