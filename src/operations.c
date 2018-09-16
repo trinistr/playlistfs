@@ -34,17 +34,27 @@ int pfs_getattr (const char* path, struct stat* statbuf) {
 		statbuf->st_nlink = 2;
 		return 0;
 	}
-	pfs_data* data = fuse_get_context ()->private_data;
+	struct fuse_context* context = fuse_get_context ();
+	pfs_data* data =  context->private_data;
 	// The path always starts with '/'
 	pfs_file* file = g_hash_table_lookup (data->filetable, path + 1);
 	if (!file)
 		return -ENOENT;
-	if (lstat (file->path, statbuf) < 0)
-		return -errno;
-	if (data->opts.fuse.ro)
-		statbuf->st_mode &= ~0222;
-	if (data->opts.fuse.noexec)
-		statbuf->st_mode &= ~0111;
+	if (!data->opts.symlink && !S_ISLNK(file->type)) {
+		if (lstat (file->path, statbuf) < 0)
+			return -errno;
+		if (data->opts.fuse.ro)
+			statbuf->st_mode &= ~0222;
+		if (data->opts.fuse.noexec)
+			statbuf->st_mode &= ~0111;
+	}
+	else {
+		statbuf->st_mode = S_IFLNK|0777;
+		statbuf->st_uid = context->uid;
+		statbuf->st_gid = context->gid;
+		statbuf->st_size = strlen (file->path);
+		statbuf->st_nlink = file->nlinks;
+	}
 	return 0;
 }
 
@@ -78,6 +88,17 @@ int pfs_rename (const char* path, const char* newpath) {
 	g_hash_table_steal (data->filetable, key);
 	free (key);
 	g_hash_table_insert (data->filetable, strdup (newpath+1), file);
+	return 0;
+}
+
+int pfs_symlink (const char* path, const char* link) {
+	pfs_data* data = fuse_get_context ()->private_data;
+	pfs_file* file = g_hash_table_lookup (data->filetable, link + 1);
+	if (file) {
+		return -EEXIST;
+	}
+	file = pfs_file_create (strdup(path), S_IFLNK|0777);
+	g_hash_table_insert (data->filetable, strdup(link + 1), file);
 	return 0;
 }
 
