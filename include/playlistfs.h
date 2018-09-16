@@ -32,6 +32,10 @@
 #include <unistd.h>
 #include <errno.h>
 
+#ifndef PLAYLISTFS_VERSION
+#define PLAYLISTFS_VERSION "0.9.0"
+#endif
+
 typedef struct {
     char** files;
     char** lists;

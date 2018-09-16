@@ -301,6 +301,7 @@ gboolean pfs_build_playlist (pfs_data* data) {
 }
 
 gboolean pfs_parse_options (pfs_options* opts, int argc, char* argv[]) {
+	gboolean print_version = FALSE;
 	GError* optionError = NULL;
 	GOptionEntry options[] = {
 		{ "target", 't', G_OPTION_FLAG_NONE, G_OPTION_ARG_FILENAME, &opts->mount_point, "Set mount point explicitly", "DIR"},
@@ -308,6 +309,7 @@ gboolean pfs_parse_options (pfs_options* opts, int argc, char* argv[]) {
 		{ "symlink", 's', G_OPTION_FLAG_NONE, G_OPTION_ARG_NONE, &opts->symlink, "Create symlinks instead of regular files", NULL},
 		{ "verbose", 'v', G_OPTION_FLAG_NONE, G_OPTION_ARG_NONE, &opts->verbose, "Describe what is happening", NULL},
 		{ "quiet", 'q', G_OPTION_FLAG_NONE, G_OPTION_ARG_NONE, &opts->quiet, "Suppress warnings", NULL},
+		{ "version", 'V', G_OPTION_FLAG_NONE, G_OPTION_ARG_NONE, &print_version, "Display version information", NULL},
 		{}
 	};
 	GOptionEntry optionsFuse[] = {
@@ -333,6 +335,15 @@ gboolean pfs_parse_options (pfs_options* opts, int argc, char* argv[]) {
 		return FALSE;
 	}
 	g_option_context_free (optionContext);
+	
+	if (print_version) {
+		printf ("playlistfs %s\n"
+				"Copyright (C) 2018 Alexandr Bulantcov\n"
+				"This is free software; see the source for copying conditions. There is NO\n"
+				"warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n",
+				PLAYLISTFS_VERSION);
+		exit (0);
+	}
 
 	if (opts->mount_point == NULL) {
 		if (argc == 1) {
