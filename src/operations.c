@@ -36,10 +36,10 @@ int pfs_getattr (const char* path, struct stat* statbuf) {
 	}
 	pfs_data* data = fuse_get_context ()->private_data;
 	// The path always starts with '/'
-	char* realpath = g_hash_table_lookup (data->filetable, path + 1);
-	if (!realpath)
+	pfs_file* file = g_hash_table_lookup (data->filetable, path + 1);
+	if (!file)
 		return -ENOENT;
-	if (lstat (realpath, statbuf) < 0)
+	if (lstat (file->path, statbuf) < 0)
 		return -errno;
 	if (data->opts.fuse.ro)
 		statbuf->st_mode &= ~0222;
@@ -50,10 +50,10 @@ int pfs_getattr (const char* path, struct stat* statbuf) {
 
 int pfs_readlink (const char* path, char* buf, size_t size) {
 	pfs_data* data = fuse_get_context ()->private_data;
-	char* realpath = g_hash_table_lookup (data->filetable, path + 1);
-	if (!realpath)
+	pfs_file* file = g_hash_table_lookup (data->filetable, path + 1);
+	if (!file)
 		return -ENOENT;
-	strncpy (buf, realpath, size);
+	strncpy (buf, file->path, size);
 	buf[size - 1] = '\0';
 	return 0;
 }
@@ -62,8 +62,8 @@ int pfs_readlink (const char* path, char* buf, size_t size) {
 
 int pfs_unlink (const char* path) {
 	pfs_data* data = fuse_get_context ()->private_data;
-	char* realpath = g_hash_table_lookup (data->filetable, path + 1);
-	if (!realpath)
+	pfs_file* file = g_hash_table_lookup (data->filetable, path + 1);
+	if (!file)
 		return -ENOENT;
 	g_hash_table_remove (data->filetable, path+1);
 	return 0;
@@ -71,32 +71,32 @@ int pfs_unlink (const char* path) {
 
 int pfs_rename (const char* path, const char* newpath) {
 	pfs_data* data = fuse_get_context ()->private_data;
-	char* realpath = NULL;
+	pfs_file* file = NULL;
 	char* key = NULL;
-	if (!g_hash_table_lookup_extended (data->filetable, path + 1, (void**) &key, (void**) &realpath))
+	if (!g_hash_table_lookup_extended (data->filetable, path + 1, (void**) &key, (void**) &file))
 		return -ENOENT;
+	g_hash_table_steal (data->filetable, key);
 	free (key);
-	g_hash_table_steal (data->filetable, path + 1);
-	g_hash_table_insert (data->filetable, strdup (newpath+1), realpath);
+	g_hash_table_insert (data->filetable, strdup (newpath+1), file);
 	return 0;
 }
 
 int pfs_truncate (const char* path, off_t size) {
 	pfs_data* data = fuse_get_context ()->private_data;
-	char* realpath = g_hash_table_lookup (data->filetable, path + 1);
-	if (!realpath)
+	pfs_file* file = g_hash_table_lookup (data->filetable, path + 1);
+	if (!file)
 		return -ENOENT;
-	if (truncate (realpath, size) < 0)
+	if (truncate (file->path, size) < 0)
 		return -errno;
 	return 0;
 }
 
 int pfs_open (const char* path, struct fuse_file_info* fi) {
 	pfs_data* data = fuse_get_context ()->private_data;
-	char* realpath = g_hash_table_lookup (data->filetable, path + 1);
-	if (!realpath)
+	pfs_file* file = g_hash_table_lookup (data->filetable, path + 1);
+	if (!file)
 		return -ENOENT;
-	int fd = open (realpath, fi->flags);
+	int fd = open (file->path, fi->flags);
 	if (fd < 0)
 		return -errno;
 	fi->fh = fd;
@@ -149,8 +149,10 @@ int pfs_readdir (const char* path, void* buf, fuse_fill_dir_t filler, off_t offs
 	filler (buf, ".", NULL, 0);
 	filler (buf, "..", NULL, 0);
 	for (size_t i = 0; i < length; i++) {
-		if (0 != filler (buf, paths[i], NULL, 0))
+		if (0 != filler (buf, paths[i], NULL, 0)) {
+			g_free (paths);
 			return -EIO;
+		}
 	}
 	g_free (paths);
 	return 0;
@@ -167,10 +169,10 @@ int pfs_access (const char* path, int mode) {
 	if (0 == strcmp(path, "/"))
 		return 0;
 	pfs_data* data = fuse_get_context ()->private_data;
-	char* realpath = g_hash_table_lookup (data->filetable, path + 1);
-	if (!realpath)
+	pfs_file* file = g_hash_table_lookup (data->filetable, path + 1);
+	if (!file)
 		return -ENOENT;
-	if (access (realpath, mode) < 0)
+	if (access (file->path, mode) < 0)
 		return -errno;
 	return 0;
 }
@@ -191,10 +193,10 @@ int pfs_fgetattr (const char* path, struct stat* statbuf, struct fuse_file_info*
 
 int pfs_utimens (const char* path, const struct timespec tv[2]) {
 	pfs_data* data = fuse_get_context ()->private_data;
-	char* realpath = g_hash_table_lookup (data->filetable, path + 1);
-	if (!realpath)
+	pfs_file* file = g_hash_table_lookup (data->filetable, path + 1);
+	if (!file)
 		return -ENOENT;
-	if (utimensat (AT_FDCWD, realpath, tv, 0) < 0)
+	if (utimensat (AT_FDCWD, file->path, tv, 0) < 0)
 		return -errno;
 	return 0;
 }
