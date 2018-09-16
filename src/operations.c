@@ -53,8 +53,8 @@ int pfs_getattr (const char* path, struct stat* statbuf) {
 		statbuf->st_uid = context->uid;
 		statbuf->st_gid = context->gid;
 		statbuf->st_size = strlen (file->path);
-		statbuf->st_nlink = file->nlinks;
 	}
+	statbuf->st_nlink = file->nlinks;
 	return 0;
 }
 
@@ -68,14 +68,28 @@ int pfs_readlink (const char* path, char* buf, size_t size) {
 	return 0;
 }
 
-// int pfs_link (const char* path, const char* newpath);
+ int pfs_link (const char* path, const char* newpath) {
+	pfs_data* data = fuse_get_context ()->private_data;
+	pfs_file* file = g_hash_table_lookup (data->filetable, path + 1);
+	if (!file || S_ISDIR(file->type))
+		return -ENOENT;
+	char* key = strdup (newpath + 1);
+	if (!key)
+		return -errno;
+	g_hash_table_insert (data->filetable, key, file);
+	file->nlinks++;
+	return 0;
+ }
 
 int pfs_unlink (const char* path) {
 	pfs_data* data = fuse_get_context ()->private_data;
-	pfs_file* file = g_hash_table_lookup (data->filetable, path + 1);
-	if (!file)
+	pfs_file* file;
+	char* key;
+	if (!g_hash_table_lookup_extended (data->filetable, path + 1, (void**)&key, (void**) &file))
 		return -ENOENT;
-	g_hash_table_remove (data->filetable, path+1);
+	g_hash_table_steal (data->filetable, key);
+	free (key);
+	file->nlinks--;
 	return 0;
 }
 
