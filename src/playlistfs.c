@@ -319,7 +319,7 @@ gboolean pfs_parse_options (pfs_options* opts, int argc, char* argv[]) {
 		{ "debug", 'd', G_OPTION_FLAG_NONE, G_OPTION_ARG_NONE, &opts->fuse.debug, "Enable debugging mode", NULL},
 		{}
 	};
-	GOptionContext* optionContext = g_option_context_new ("LIST... [DIR]");
+	GOptionContext* optionContext = g_option_context_new ("[LIST...] [DIR]");
 	GOptionGroup* optionsFuseGroup = g_option_group_new (
 			"fuse", "Options passed to FUSE", "FUSE options", NULL, NULL
 			);
@@ -328,6 +328,8 @@ gboolean pfs_parse_options (pfs_options* opts, int argc, char* argv[]) {
 	g_option_context_add_group (optionContext, optionsFuseGroup);
 	g_option_group_add_entries (optionsFuseGroup, optionsFuse);
 	g_option_context_set_help_enabled (optionContext, TRUE);
+	g_option_context_set_summary (optionContext,
+			"PlaylistFS mounts a FUSE filesystem with files taken from user-supplied list(s).");
 
 	if (!g_option_context_parse (optionContext, &argc, &argv, &optionError)) {
 		printerrf ("%s", optionError->message);
