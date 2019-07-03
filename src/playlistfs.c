@@ -304,7 +304,7 @@ gboolean pfs_parse_options (pfs_options* opts, int argc, char* argv[]) {
 	gboolean print_version = FALSE;
 	GError* optionError = NULL;
 	GOptionEntry options[] = {
-		{ "target", 't', G_OPTION_FLAG_NONE, G_OPTION_ARG_FILENAME, &opts->mount_point, "Set mount point explicitly", "DIR"},
+		{ "target", 't', G_OPTION_FLAG_NONE, G_OPTION_ARG_FILENAME, &opts->mount_point, "Set mount point explicitly", "MOUNT_DIR"},
 		{ "file", 'f', G_OPTION_FLAG_NONE, G_OPTION_ARG_FILENAME_ARRAY, &opts->files, "Add a single file to playlist", "FILE"},
 		{ "symlink", 's', G_OPTION_FLAG_NONE, G_OPTION_ARG_NONE, &opts->symlink, "Create symlinks instead of regular files", NULL},
 		{ "verbose", 'v', G_OPTION_FLAG_NONE, G_OPTION_ARG_NONE, &opts->verbose, "Describe what is happening", NULL},
@@ -319,9 +319,9 @@ gboolean pfs_parse_options (pfs_options* opts, int argc, char* argv[]) {
 		{ "debug", 'd', G_OPTION_FLAG_NONE, G_OPTION_ARG_NONE, &opts->fuse.debug, "Enable debugging mode", NULL},
 		{}
 	};
-	GOptionContext* optionContext = g_option_context_new ("[LIST...] [DIR]");
+	GOptionContext* optionContext = g_option_context_new ("[LIST...] [MOUNT_DIR]");
 	GOptionGroup* optionsFuseGroup = g_option_group_new (
-			"fuse", "Options passed to FUSE", "FUSE options", NULL, NULL
+			"fuse", "Options passed to FUSE:", "FUSE options", NULL, NULL
 			);
 
 	g_option_context_add_main_entries (optionContext, options, NULL);
@@ -337,10 +337,10 @@ gboolean pfs_parse_options (pfs_options* opts, int argc, char* argv[]) {
 		return FALSE;
 	}
 	g_option_context_free (optionContext);
-	
+
 	if (print_version) {
 		printf ("playlistfs %s\n"
-				"Copyright (C) 2018 Alexandr Bulantcov\n"
+				"Copyright (C) 2018,2019 Alexandr Bulantcov\n"
 				"This is free software; see the source for copying conditions. There is NO\n"
 				"warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n",
 				PLAYLISTFS_VERSION);

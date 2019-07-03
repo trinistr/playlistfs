@@ -16,7 +16,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-# Usage: mangen program "description" section_number
+# Usage: mangen program "short description" section_number
 
 # Crutch for making a man page with help2man.
 # Allows to change program output to comply with what
@@ -24,7 +24,7 @@
 # Currently all it does is change 'Usage' to one line
 
 PROGRAM="$1"
-NAME_TEXT="$2"
+DESCRIPTION="$2"
 SECTION_NUMBER="$3"
 HELP_OPTION="--help-all"
 VERSION_OPTION="--version"
@@ -32,22 +32,12 @@ HELP_PROCESSING="|perl -pe 'BEGIN{undef $/;} s/Usage:\s+/Usage: /'"
 VERSION_PROCESING=
 
 
-# Messy code, begin!
+HELP=`$PROGRAM $HELP_OPTION`
+VERSION=`$PROGRAM $VERSION_OPTION`
+HELP=`sh -c "echo '$HELP' $HELP_PROCESSING"`
+VERSION=`sh -c "echo '$VERSION' $VERSION_PROCESSING"`
 
-FILE="`mktemp`"
-HELP="`$PROGRAM $HELP_OPTION`"
-VERSION="`$PROGRAM $VERSION_OPTION`"
-
-HELPFILE="`mktemp`"
-chmod +x $HELPFILE
-echo '#!/bin/sh' > $HELPFILE
-echo "echo '$HELP' $HELP_PROCESSING" >> $HELPFILE
-HELP=`$HELPFILE`
-echo '#!/bin/sh' > $HELPFILE
-echo "echo '$VERSION' $VERSION_PROCESSING" >> $HELPFILE
-VERSION=`$HELPFILE`
-rm $HELPFILE
-
+FILE=`mktemp -d`/playlistfs
 echo '#!/bin/sh' > $FILE
 echo 'case "$1" in' >> $FILE
 echo '--help)' >> $FILE
@@ -57,6 +47,6 @@ echo "echo '$VERSION';;" >> $FILE
 echo 'esac' >> $FILE
 chmod +x $FILE
 
-help2man --name="$NAME_TEXT" --section=$SECTION_NUMBER --no-info "$FILE"
+help2man --name="$DESCRIPTION" --section=$SECTION_NUMBER --no-info "$FILE"
 
 rm $FILE
