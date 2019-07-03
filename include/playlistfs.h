@@ -31,6 +31,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <errno.h>
+#include <libgen.h>
 
 #ifndef PLAYLISTFS_VERSION
 #define PLAYLISTFS_VERSION "0.9.0"
@@ -41,6 +42,11 @@ typedef struct {
     char** lists;
     char* mount_point;
     gboolean symlink;
+    struct {
+        gboolean all;
+        gboolean files;
+        gboolean lists;
+    } relative_disabled;
     gboolean verbose;
     gboolean quiet;
     struct {

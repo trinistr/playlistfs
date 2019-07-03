@@ -156,13 +156,39 @@ gboolean pfs_build_playlist (pfs_data* data) {
 	char** files = data->opts.files;
 	GHashTable* table = data->filetable;
 	char* path = malloc (sizeof (*path) * PATH_MAX);
+	if (!path) {
+		printerr ("memory allocation failed");
+		return FALSE;
+	}
 	struct stat filestat;
-	pfs_file* saved_file;
+	pfs_file* saved_file = NULL;
+	size_t cwdlength = 0;
+	char* cwd = NULL;
+	if (!data->opts.relative_disabled.all) {
+		cwd = malloc(sizeof(*cwd) * PATH_MAX);
+		if (!cwd) {
+			printerr ("memory allocation failed");
+			free(path);
+			return FALSE;
+		}
+		if (getcwd(cwd, PATH_MAX)) {
+			cwdlength = strlen(cwd);
+			if (cwd[cwdlength - 1] != '/') {
+				cwd[cwdlength] = '/';
+				cwdlength++;
+			}
+		}
+		else {
+			printerr ("could not get current working directory, relative filenames will be ignored");
+		}
+	}
 
 	if (lists != NULL) {
 		for (size_t ilist = 0; lists[ilist]; ilist++) {
 			FILE* list = fopen (lists[ilist], "rt");
 			if (list) {
+				char* listpath = dirname(lists[ilist]);
+				size_t listpathlength = strlen(listpath);
 				printinfof ("Reading list '%s'", lists[ilist]);
 				while (fgets (path, PATH_MAX, list)) {
 					size_t length = strlen (path);
@@ -177,37 +203,69 @@ gboolean pfs_build_playlist (pfs_data* data) {
 						while (fgetc(list) != '\n') {}
 						continue;
 					}
-					
-					if (path[0] == '/') {
-						if (0 == stat (path, &filestat)) {
-							if (!S_ISDIR (filestat.st_mode)) {
-								char* name = strdup (basename (path));
-								saved_file = pfs_file_create (path, filestat.st_mode);
-								if (!name || !saved_file) {
-									printerr ("memory allocation failed");
-									if (name)
-										free (name);
-									if (saved_file)
-										pfs_file_free (saved_file);
-									return FALSE;
+
+					if (path[0] != '/') {
+						if (!data->opts.relative_disabled.lists) {
+							size_t pathlength = strlen(path);
+							if (lists[ilist][0] != '/') {
+								if (cwdlength + listpathlength + pathlength < PATH_MAX) {
+									memmove(path + cwdlength + listpathlength + 1, path, pathlength);
+									memcpy(path, cwd, cwdlength);
+									memcpy(path + cwdlength, listpath, listpathlength);
+									path[cwdlength + listpathlength] = '/';
+									path[cwdlength + listpathlength + pathlength + 1] = '\0';
 								}
-								// Ensure that we don't leak memory on duplicate keys
-								g_hash_table_remove (table, name);
-								g_hash_table_insert (table, name, saved_file);
+								else {
+									printwarn ("filename too long, ignoring");
+									continue;
+								}
 							}
 							else {
-								printwarnf ("file '%s' is a directory, ignoring", path);
+								if (pathlength + listpathlength < PATH_MAX) {
+									memmove(path + listpathlength + 1, path, pathlength);
+									memcpy(path, listpath, listpathlength);
+									path[listpathlength] = '/';
+									path[listpathlength + pathlength + 1] = '\0';
+								}
+								else {
+									printwarn ("filename too long, ignoring");
+									continue;
+								}
 							}
 						}
 						else {
-							printwarnf ("file '%s' is inaccessible, ignoring", path);
+							printinfof ("Ignoring relative path '%s'", path);
+							continue;
+						}
+					}
+					if (0 == stat (path, &filestat)) {
+						if (!S_ISDIR (filestat.st_mode)) {
+							char* name = strdup (basename (path));
+							printinfof("\t%s", path);
+							saved_file = pfs_file_create (path, filestat.st_mode);
+							if (!name || !saved_file) {
+								printerr ("memory allocation failed");
+								if (name)
+									free (name);
+								if (saved_file)
+									pfs_file_free (saved_file);
+								if (cwd)
+									free (cwd);
+								return FALSE;
+							}
+							// Ensure that we don't leak memory on duplicate keys
+							g_hash_table_remove (table, name);
+							g_hash_table_insert (table, name, saved_file);
+						}
+						else {
+							printwarnf ("file '%s' is a directory, ignoring", path);
 						}
 					}
 					else {
-						printwarnf ("path '%s' is not absolute, ignoring", path);
+						printwarnf ("file '%s' is inaccessible, ignoring", path);
 					}
 				}
-				
+
 				if (feof (list)) {
 					fclose (list);
 				}
@@ -224,59 +282,57 @@ gboolean pfs_build_playlist (pfs_data* data) {
 
 	if (files != NULL) {
 		printinfo ("Adding individual files:");
-		size_t cwdlength;
-		if (getcwd (path, PATH_MAX) && path[0] == '/') {
-			cwdlength = strlen (path);
-			if (path[cwdlength - 1] != '/') {
-				path[cwdlength++] = '/';
-			}
-		}
-		else {
-			printerr ("could not get current working directory, relative filenames will be ignored");
-			cwdlength = 0;
-		}
-		
 		for (size_t ifile = 0; files[ifile]; ifile++) {
 			if (files[ifile][0] != '/') {
-				if (cwdlength) {
-					size_t length = strlen (files[ifile]);
-					if (length > 0) {
-						if (cwdlength + length <= PATH_MAX) {
-							strcpy (path + cwdlength, files[ifile]);
-							saved_file = pfs_file_create (path, 0);
-							if (!saved_file) {
-								printerr ("memory allocation failed");
-								return FALSE;
+				if (!data->opts.relative_disabled.files) {
+					if (cwdlength) {
+						size_t length = strlen (files[ifile]);
+						if (length > 0) {
+							if (cwdlength + length < PATH_MAX) {
+								strcpy (path, cwd);
+								strcpy (path + cwdlength, files[ifile]);
+								saved_file = pfs_file_create (path, 0);
+								if (!saved_file) {
+									printerr ("memory allocation failed");
+									if (cwd)
+										free (cwd);
+									return FALSE;
+								}
+								if (data->opts.verbose) fprintf (stderr, "\t%s -> %s\n", files[ifile], path);
 							}
-							if (data->opts.verbose) fprintf (stderr, "\t%s -> %s\n", files[ifile], path);
+							else {
+								printwarn ("filename too long, ignoring");
+								continue;
+							}
 						}
 						else {
-							printwarn ("filename too long, ignoring");
+							printwarn ("empty filename");
 							continue;
 						}
 					}
 					else {
-						printwarn ("empty filename");
+						printwarnf ("Ignoring relative path '%s'", files[ifile]);
 						continue;
 					}
 				}
 				else {
-					printwarnf ("Ignoring file '%s'", files[ifile]);
+					printinfof ("Ignoring relative path '%s'", files[ifile]);
 					continue;
 				}
-
 			}
 			else {
 				saved_file = pfs_file_create (files[ifile], 0);
 				printinfof ("\t%s", saved_file->path);
 			}
-			
+
 			if (0 == stat (saved_file->path, &filestat)) {
 				if (!S_ISDIR (filestat.st_mode)) {
 					char* name = strdup (basename (files[ifile]));
 					if (!name) {
 						printerr ("memory allocation failed");
 						pfs_file_free(saved_file);
+						if (cwd)
+							free (cwd);
 						return FALSE;
 					}
 					saved_file->type = filestat.st_mode&S_IFMT;
@@ -296,6 +352,9 @@ gboolean pfs_build_playlist (pfs_data* data) {
 			}
 		}
 	}
+	
+	free (cwd);
+	free (path);
 
 	return TRUE;
 }
@@ -306,6 +365,12 @@ gboolean pfs_parse_options (pfs_options* opts, int argc, char* argv[]) {
 	GOptionEntry options[] = {
 		{ "target", 't', G_OPTION_FLAG_NONE, G_OPTION_ARG_FILENAME, &opts->mount_point, "Set mount point explicitly", "MOUNT_DIR"},
 		{ "file", 'f', G_OPTION_FLAG_NONE, G_OPTION_ARG_FILENAME_ARRAY, &opts->files, "Add a single file to playlist", "FILE"},
+		{ "no-relative", 'n', G_OPTION_FLAG_NONE, G_OPTION_ARG_NONE, &opts->relative_disabled.all, "Disable relative path handling", NULL},
+		{ "relative", 0, G_OPTION_FLAG_HIDDEN|G_OPTION_FLAG_REVERSE, G_OPTION_ARG_NONE, &opts->relative_disabled.all, NULL, NULL},
+		{ "no-relative-files", 0, G_OPTION_FLAG_NONE, G_OPTION_ARG_NONE, &opts->relative_disabled.files, "Disable relative path handling for files added with -f", NULL},
+		{ "relatve-files", 0, G_OPTION_FLAG_HIDDEN|G_OPTION_FLAG_REVERSE, G_OPTION_ARG_NONE, &opts->relative_disabled.files, NULL, NULL},
+		{ "no-relative-lists", 0, G_OPTION_FLAG_NONE, G_OPTION_ARG_NONE, &opts->relative_disabled.lists, "Disable relative path handling in LISTs", NULL},
+		{ "relatve-lists", 0, G_OPTION_FLAG_HIDDEN|G_OPTION_FLAG_REVERSE, G_OPTION_ARG_NONE, &opts->relative_disabled.lists, NULL, NULL},
 		{ "symlink", 's', G_OPTION_FLAG_NONE, G_OPTION_ARG_NONE, &opts->symlink, "Create symlinks instead of regular files", NULL},
 		{ "verbose", 'v', G_OPTION_FLAG_NONE, G_OPTION_ARG_NONE, &opts->verbose, "Describe what is happening", NULL},
 		{ "quiet", 'q', G_OPTION_FLAG_NONE, G_OPTION_ARG_NONE, &opts->quiet, "Suppress warnings", NULL},
@@ -345,6 +410,11 @@ gboolean pfs_parse_options (pfs_options* opts, int argc, char* argv[]) {
 				"warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n",
 				PLAYLISTFS_VERSION);
 		exit (0);
+	}
+
+	if (opts->relative_disabled.all) {
+		opts->relative_disabled.files = TRUE;
+		opts->relative_disabled.lists = TRUE;
 	}
 
 	if (opts->mount_point == NULL) {
