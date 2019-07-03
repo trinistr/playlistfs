@@ -102,6 +102,13 @@ int main (int argc, char* argv[]) {
 		exit (EXIT_FAILURE);
 	}
 	
+	free(fuse_argv[4]);
+	free(fuse_argv);
+	g_hash_table_unref (data->filetable);
+	free(data->opts.files);
+	free(data->opts.lists);
+	free(data);
+
 	return EXIT_SUCCESS;
 }
 
@@ -112,19 +119,23 @@ gboolean pfs_setup_fuse_arguments (int* argc, char** argv[], char* pfs_name, pfs
 		printerr ("memory allocation failed");
 		return FALSE;
 	}
-	
+
 	fuse_argv[fuse_argc++] = pfs_name;
 	fuse_argv[fuse_argc++] = data->opts.mount_point;
 	fuse_argv[fuse_argc++] = "-odefault_permissions";
 	fuse_argv[fuse_argc++] = "-osubtype=playlistfs";
-	fuse_argv[fuse_argc] = malloc (11 + strlen (data->opts.lists[0]) + 1);
-	if(!fuse_argv[fuse_argc]) {
-		printerr ("memory allocation failed");
-		free (fuse_argv);
-		return FALSE;
+	if (data->opts.lists[0]) {
+		fuse_argv[fuse_argc] = malloc (11 + strlen (data->opts.lists[0]) + 1);
+		if(!fuse_argv[fuse_argc]) {
+			printerr ("memory allocation failed");
+			free (fuse_argv);
+			return FALSE;
+		}
+		sprintf (fuse_argv[fuse_argc++], "-ofsname='%s'", data->opts.lists[0]);
 	}
-	sprintf (fuse_argv[fuse_argc++], "-ofsname='%s'", data->opts.lists[0]);
-	//fuse_argv[fuse_argc++] = "-ofsname=playlistfs";
+	else {
+		fuse_argv[fuse_argc++] = "-ofsname=playlistfs";
+	}
 	printinfo ("Passing options to FUSE:");
 	if (data->opts.fuse.debug) {
 		fuse_argv[fuse_argc++] = "-d";
@@ -145,7 +156,7 @@ gboolean pfs_setup_fuse_arguments (int* argc, char** argv[], char* pfs_name, pfs
 	if ( !(data->opts.fuse.debug || data->opts.fuse.ro
 			|| data->opts.fuse.noatime || data->opts.fuse.noexec) )
 		printinfo ("\tno options to pass");
-	
+
 	*argc = fuse_argc;
 	*argv = fuse_argv;
 	return TRUE;
@@ -437,16 +448,15 @@ gboolean pfs_parse_options (pfs_options* opts, int argc, char* argv[]) {
 			return FALSE;
 		}
 	}
-	if (argc > 1) {
-		opts->lists = malloc (sizeof (*opts->lists) * argc);
-		if (!opts->lists) {
-			printerr ("memory allocation failed");
-			return FALSE;
-		}
-		for (int i = 1; i < argc; i++) {
-			opts->lists[i - 1] = argv[i];
-		}
-		opts->lists[argc - 1] = NULL;
+
+	opts->lists = malloc (sizeof (*opts->lists) * argc);
+	if (!opts->lists) {
+		printerr ("memory allocation failed");
+		return FALSE;
 	}
+	for (int i = 1; i < argc; i++) {
+		opts->lists[i - 1] = argv[i];
+	}
+	opts->lists[argc - 1] = NULL;
 	return TRUE;
 }
