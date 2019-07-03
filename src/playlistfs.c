@@ -81,27 +81,27 @@ int main (int argc, char* argv[]) {
 		printerr ("memory allocation failed");
 		exit (EXIT_FAILURE);
 	}
-	
+
 	if (!pfs_parse_options (&data->opts, argc, argv)) {
 		exit (EXIT_FAILURE);
 	}
-	
+
 	data->filetable = g_hash_table_new_full (g_str_hash, g_str_equal, free, pfs_file_free_void);
 	if (!pfs_build_playlist (data)) {
 		exit (EXIT_FAILURE);
 	}
-	
+
 	int fuse_argc = 0;
 	char** fuse_argv = NULL;
 	if (!pfs_setup_fuse_arguments (&fuse_argc, &fuse_argv, argv[0], data)) {
 		exit (EXIT_FAILURE);
 	}
-	
+
 	if (!fuse_main (fuse_argc, fuse_argv, &pfs_operations, data)) {
 		printerr ("calling FUSE failed");
 		exit (EXIT_FAILURE);
 	}
-	
+
 	free(fuse_argv[4]);
 	free(fuse_argv);
 	g_hash_table_unref (data->filetable);
@@ -363,7 +363,7 @@ gboolean pfs_build_playlist (pfs_data* data) {
 			}
 		}
 	}
-	
+
 	free (cwd);
 	free (path);
 

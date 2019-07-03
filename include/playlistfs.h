@@ -15,6 +15,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+
 #ifndef PLAYLISTFS_H
 #define PLAYLISTFS_H
 
@@ -53,7 +54,7 @@ typedef struct {
         gboolean ro;
         gboolean noexec;
         gboolean noatime;
-	gboolean debug;
+        gboolean debug;
     } fuse;
 } pfs_options;
 
@@ -63,9 +64,9 @@ typedef struct {
 } pfs_data;
 
 typedef struct {
-	char* path;
-	__mode_t type;
-	char nlinks;
+    char* path;
+    __mode_t type;
+    char nlinks;
 } pfs_file;
 
 gboolean pfs_parse_options (pfs_options* opts, int argc, char* argv[]);
