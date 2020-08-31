@@ -73,6 +73,8 @@ $(BUILDDIR)/%.$(OBJEXT): $(SRCDIR)/%.$(SRCEXT)
 	@sed -e 's/.*://' -e 's/\\$$//' < $(BUILDDIR)/$*.$(DEPEXT).tmp | fmt -1 | sed -e 's/^ *//' -e 's/$$/:/' >> $(BUILDDIR)/$*.$(DEPEXT)
 	@rm -f $(BUILDDIR)/$*.$(DEPEXT).tmp
 
+doc: man
+
 man: $(TARGET).$(MAN_SECTION).gz
 
 $(TARGET).$(MAN_SECTION).gz: $(TARGET).$(MAN_SECTION)
@@ -83,4 +85,4 @@ $(TARGET).$(MAN_SECTION): $(TARGET)
 	$(MANGEN) $(TARGETDIR)/$(TARGET) "$(MAN_NAME)" $(MAN_SECTION) > $(MANDIR)/$(TARGET).$(MAN_SECTION)
 
 #Non-File Targets
-.PHONY: all remake clean cleaner man
+.PHONY: all remake clean cleaner doc man
