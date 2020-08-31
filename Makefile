@@ -8,11 +8,15 @@ TARGET      := playlistfs
 SRCDIR      := src
 INCDIR      := include
 BUILDDIR    := obj
-TARGETDIR   := dist/bin
-MANDIR      := dist/share/man/man1
+DISTDIR     := dist
+TARGETDIR   := $(DISTDIR)/bin
+MANDIR      := $(DISTDIR)/share/man/man1
 SRCEXT      := c
 DEPEXT      := d
 OBJEXT      := o
+
+#The installation prefix
+PREFIX      ?= $(HOME)/.local
 
 #man things
 MANGEN      := ./mangen
@@ -56,6 +60,15 @@ cleaner: clean
 	@$(RM) $(TARGETDIR)/$(TARGET)
 	@$(RM) $(MANDIR)/$(TARGET).$(MAN_SECTION).gz
 
+install:
+	install --target-directory "$(PREFIX)/bin" -D -- $(TARGETDIR)/*
+	install --target-directory "$(PREFIX)/share/man/man1" -D -- $(MANDIR)/$(TARGET).$(MAN_SECTION).gz
+	install --target-directory "$(PREFIX)/share/applications" -D -- $(DISTDIR)/share/applications/*
+
+install-mime:
+	xdg-mime install --novendor $(DISTDIR)/share/mime/packages/*
+	xdg-mime default $(shell basename $(DISTDIR)/share/applications/*) $(shell grep -o 'type="[^"]*' $(DISTDIR)/share/mime/packages/* | cut -c 7-)
+
 #Pull in dependency info for *existing* .o files
 -include $(OBJECTS:.$(OBJEXT)=.$(DEPEXT))
 
@@ -85,4 +98,4 @@ $(TARGET).$(MAN_SECTION): $(TARGET)
 	$(MANGEN) $(TARGETDIR)/$(TARGET) "$(MAN_NAME)" $(MAN_SECTION) > $(MANDIR)/$(TARGET).$(MAN_SECTION)
 
 #Non-File Targets
-.PHONY: all remake clean cleaner doc man
+.PHONY: all remake clean cleaner doc man install install-mime
