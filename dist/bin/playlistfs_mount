@@ -1,0 +1,22 @@
+#!/bin/sh
+
+if [ -z "$1" -o "-h" = "$1" -o "--help" = "$1" ]; then
+	echo "Usage: $0 PLAYLIST [OPTIONS]"
+	exit
+fi
+if [ ! -f "$1" ]; then
+	echo "error: no such file" 1>&2
+	exit 1
+fi
+
+playlist="$1"
+playlist_dir="`dirname $playlist`/`basename $playlist .playlist` playlist"
+shift
+
+if [ -d "$playlist_dir" ]; then
+	fusermount -u -- "$playlist_dir"
+	rmdir "$playlist_dir"
+else
+	mkdir -p -- "$playlist_dir"
+	playlistfs "$@" -- "$playlist" "$playlist_dir"
+fi

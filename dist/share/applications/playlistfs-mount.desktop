@@ -1,0 +1,9 @@
+[Desktop Entry]
+Encoding=UTF-8
+Version=1.0
+Type=Application
+NoDisplay=true
+Exec=playlistfs_mount %f
+Name=PlaylistFS
+Comment=Mount playlist with PlaylistFS
+MimeType=text/x-playlist;
