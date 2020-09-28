@@ -211,7 +211,7 @@ gboolean pfs_build_playlist (pfs_data* data) {
 					}
 					else if (length == PATH_MAX - 1) {
 						printwarn ("filename too long, ignoring");
-						while (fgetc(list) != '\n') {}
+						while (fgetc(list) != '\n' && !feof(list) && !ferror(list)) {}
 						continue;
 					}
 
