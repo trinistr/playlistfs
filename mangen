@@ -1,0 +1,62 @@
+#!/bin/sh
+
+# Copyright ©2018 Aleksandr Bulantcov
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+
+# Usage: mangen program "description" section_number
+
+# Crutch for making a man page with help2man.
+# Allows to change program output to comply with what
+# help2man expects to see.
+# Currently all it does is change 'Usage' to one line
+
+PROGRAM="$1"
+NAME_TEXT="$2"
+SECTION_NUMBER="$3"
+HELP_OPTION="--help-all"
+VERSION_OPTION="--version"
+HELP_PROCESSING="|perl -pe 'BEGIN{undef $/;} s/Usage:\s+/Usage: /'"
+VERSION_PROCESING=
+
+
+# Messy code, begin!
+
+FILE="`mktemp`"
+HELP="`$PROGRAM $HELP_OPTION`"
+VERSION="`$PROGRAM $VERSION_OPTION`"
+
+HELPFILE="`mktemp`"
+chmod +x $HELPFILE
+echo '#!/bin/sh' > $HELPFILE
+echo "echo '$HELP' $HELP_PROCESSING" >> $HELPFILE
+HELP=`$HELPFILE`
+echo '#!/bin/sh' > $HELPFILE
+echo "echo '$VERSION' $VERSION_PROCESSING" >> $HELPFILE
+VERSION=`$HELPFILE`
+rm $HELPFILE
+
+echo '#!/bin/sh' > $FILE
+echo 'case "$1" in' >> $FILE
+echo '--help)' >> $FILE
+echo "echo '$HELP';;" >> $FILE
+echo '--version)' >> $FILE
+echo "echo '$VERSION';;" >> $FILE
+echo 'esac' >> $FILE
+chmod +x $FILE
+
+help2man --name="$NAME_TEXT" --section=$SECTION_NUMBER --no-info "$FILE"
+
+rm $FILE

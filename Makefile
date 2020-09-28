@@ -9,17 +9,23 @@ SRCDIR      := src
 INCDIR      := include
 BUILDDIR    := obj
 TARGETDIR   := .
+MANDIR      := .
 SRCEXT      := c
 DEPEXT      := d
 OBJEXT      := o
 
+#man things
+MANGEN      := ./mangen
+MAN_NAME    := playlist as a file system
+MAN_SECTION := 1
+
 #Flags, Libraries and Includes
-DEBUG ?= 1
+DEBUG ?= 0
 ifeq ($(DEBUG), 1)
     CFLAGS  := -Wall -ggdb -O0 --std=c11 $(shell pkg-config fuse --cflags) $(shell pkg-config glib-2.0 --cflags)
 else
     CFLAGS  := -Wall -O3 --std=c11 $(shell pkg-config fuse --cflags) $(shell pkg-config glib-2.0 --cflags)
-endif 
+endif
 LIB         := $(shell pkg-config fuse --libs) $(shell pkg-config glib-2.0 --libs)
 INC         := -I$(INCDIR) -I/usr/include
 INCDEP      := -I$(INCDIR)
@@ -47,7 +53,8 @@ clean:
 
 #Full Clean, Objects and Binaries
 cleaner: clean
-	@$(RM) $(TARGET)
+	@$(RM) $(TARGETDIR)/$(TARGET)
+	@$(RM) $(MANDIR)/$(TARGET).$(MAN_SECTION).gz
 
 #Pull in dependency info for *existing* .o files
 -include $(OBJECTS:.$(OBJEXT)=.$(DEPEXT))
@@ -66,5 +73,14 @@ $(BUILDDIR)/%.$(OBJEXT): $(SRCDIR)/%.$(SRCEXT)
 	@sed -e 's/.*://' -e 's/\\$$//' < $(BUILDDIR)/$*.$(DEPEXT).tmp | fmt -1 | sed -e 's/^ *//' -e 's/$$/:/' >> $(BUILDDIR)/$*.$(DEPEXT)
 	@rm -f $(BUILDDIR)/$*.$(DEPEXT).tmp
 
+man: $(TARGET).$(MAN_SECTION).gz
+
+$(TARGET).$(MAN_SECTION).gz: $(TARGET).$(MAN_SECTION)
+	gzip -f $(MANDIR)/$(TARGET).$(MAN_SECTION)
+
+$(TARGET).$(MAN_SECTION): $(TARGET)
+	@mkdir -p $(MANDIR)
+	$(MANGEN) $(TARGETDIR)/$(TARGET) "$(MAN_NAME)" $(MAN_SECTION) > $(MANDIR)/$(TARGET).$(MAN_SECTION)
+
 #Non-File Targets
-.PHONY: all remake clean cleaner resources
+.PHONY: all remake clean cleaner man
