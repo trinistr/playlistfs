@@ -35,7 +35,7 @@
 #include <libgen.h>
 
 #ifndef PLAYLISTFS_VERSION
-#define PLAYLISTFS_VERSION "0.2.1"
+#define PLAYLISTFS_VERSION "0.2.2"
 #endif
 
 typedef struct {
