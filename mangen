@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# Copyright ©2018 Aleksandr Bulantcov
+# Copyright ©2018,2020 Aleksandr Bulantcov
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -32,21 +32,22 @@ HELP_PROCESSING="|perl -pe 'BEGIN{undef $/;} s/Usage:\s+/Usage: /'"
 VERSION_PROCESING=
 
 
-HELP=`$PROGRAM $HELP_OPTION`
-VERSION=`$PROGRAM $VERSION_OPTION`
-HELP=`sh -c "echo '$HELP' $HELP_PROCESSING"`
-VERSION=`sh -c "echo '$VERSION' $VERSION_PROCESSING"`
+HELP="`\"$PROGRAM\" $HELP_OPTION`"
+VERSION="`\"$PROGRAM\" $VERSION_OPTION`"
+HELP="`sh -c \"echo '$HELP' $HELP_PROCESSING\"`"
+VERSION="`sh -c \"echo '$VERSION' $VERSION_PROCESSING\"`"
 
-FILE=`mktemp -d`/playlistfs
-echo '#!/bin/sh' > $FILE
-echo 'case "$1" in' >> $FILE
-echo '--help)' >> $FILE
-echo "echo '$HELP';;" >> $FILE
-echo '--version)' >> $FILE
-echo "echo '$VERSION';;" >> $FILE
-echo 'esac' >> $FILE
-chmod +x $FILE
+TMPDIR="`mktemp -d`"
+FILE="$TMPDIR/`basename \"$PROGRAM\"`"
+echo '#!/bin/sh' > "$FILE"
+echo 'case "$1" in' >> "$FILE"
+echo '--help)' >> "$FILE"
+echo "echo '$HELP';;" >> "$FILE"
+echo '--version)' >> "$FILE"
+echo "echo '$VERSION';;" >> "$FILE"
+echo 'esac' >> "$FILE"
+chmod +x "$FILE"
 
-help2man --name="$DESCRIPTION" --section=$SECTION_NUMBER --no-info "$FILE"
+help2man --name="$DESCRIPTION" --section="$SECTION_NUMBER" --no-info "$FILE"
 
-rm $FILE
+rm -r "$TMPDIR"
