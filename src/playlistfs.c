@@ -415,11 +415,11 @@ gboolean pfs_parse_options (pfs_options* opts, int argc, char* argv[]) {
 	g_option_context_free (optionContext);
 
 	if (print_version) {
-		printf ("playlistfs %s\n"
-				"Copyright (C) 2018,2019 Alexandr Bulantcov\n"
+		puts ("playlistfs " PLAYLISTFS_VERSION "\n"
+				"Copyright (C) 2018-2020 Aleksandr Bulantcov\n"
 				"This is free software; see the source for copying conditions. There is NO\n"
-				"warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n",
-				PLAYLISTFS_VERSION);
+				"warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE."
+		);
 		exit (0);
 	}
 
