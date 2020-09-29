@@ -43,6 +43,20 @@ OBJECTS     := $(patsubst $(SRCDIR)/%,$(BUILDDIR)/%,$(SOURCES:.$(SRCEXT)=.$(OBJE
 #Default Make
 all: $(TARGET)
 
+install-all: install install-mime install-mime-default
+
+install:
+	install --target-directory "$(PREFIX)/bin" -D -- $(TARGETDIR)/$(TARGET)
+	install --target-directory "$(PREFIX)/share/man/man1" -D -- $(MANDIR)/$(TARGET).$(MAN_SECTION).gz
+
+install-mime:
+	install --target-directory "$(PREFIX)/share/applications" -D -- $(DISTDIR)/share/applications/*
+	install --target-directory "$(PREFIX)/bin" -D -- $(TARGETDIR)/*
+	xdg-mime install --novendor $(DISTDIR)/share/mime/packages/*
+
+install-mime-default:
+	xdg-mime default $(shell basename $(DISTDIR)/share/applications/*) $(shell grep -o 'type="[^"]*' $(DISTDIR)/share/mime/packages/* | cut -c 7-)
+
 #Remake
 remake: cleaner all
 
@@ -59,15 +73,6 @@ clean:
 cleaner: clean
 	@$(RM) $(TARGETDIR)/$(TARGET)
 	@$(RM) $(MANDIR)/$(TARGET).$(MAN_SECTION).gz
-
-install:
-	install --target-directory "$(PREFIX)/bin" -D -- $(TARGETDIR)/*
-	install --target-directory "$(PREFIX)/share/man/man1" -D -- $(MANDIR)/$(TARGET).$(MAN_SECTION).gz
-	install --target-directory "$(PREFIX)/share/applications" -D -- $(DISTDIR)/share/applications/*
-
-install-mime:
-	xdg-mime install --novendor $(DISTDIR)/share/mime/packages/*
-	xdg-mime default $(shell basename $(DISTDIR)/share/applications/*) $(shell grep -o 'type="[^"]*' $(DISTDIR)/share/mime/packages/* | cut -c 7-)
 
 #Pull in dependency info for *existing* .o files
 -include $(OBJECTS:.$(OBJEXT)=.$(DEPEXT))
