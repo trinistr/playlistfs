@@ -15,31 +15,33 @@ PlaylistFS has following library dependencies:
 - libfuse2
 - libglib2.0
 
-Unmounting is done with `fusermount` program, which is provided by FUSE.
 On systems with separate development packages those need to be installed as
 well. On Ubuntu-like systems required packages can be installed by executing the
 following command:
-```
+```sh
 apt install fuse libfuse-dev libglib2.0-dev
 ```
+
 Makefile also uses `pkg-config`, so make sure it is installed as well.
 
 To compile, it is enough to run
-```
+```sh
 make
 ```
+
 If you want to also generate a very simple man page, install `help2man` package
 and run
-```
+```sh
 make doc
 ```
 
 ## Installing
 
 Quick install:
-```
+```sh
 make install-all
 ```
+
 Installation can be done in several steps:
 - `make install` will install only the compiled binary and man page;
 - `make install-mime` will install files needed for automatic mounting;
@@ -47,7 +49,7 @@ Installation can be done in several steps:
 
 By default, files are installed in `~/.local` tree. This can be changed by
 supplying a PREFIX variable to make:
-```
+```sh
 PREFIX=/usr make install-all
 ```
 
@@ -77,9 +79,12 @@ file1
 documents/file1
 ```
 This playlist contains one absolute path (`/etc/default/keyboard`), other paths
-are relative. Note that `documents/file` shadows the earlier `file1`.
+are relative. Note that `documents/file1` shadows the earlier `file1`.
 
 ### Mounting on command line
+
+> [!NOTE]
+> Check all options with `playlistfs --help-all`. Options that are passed along to FUSE are not shown with plain `--help`.
 
 When using command line, it is possible to specify files to mount in several
 ways. The user can specify several playlists and individual files to include
@@ -88,7 +93,7 @@ basename, later paths take precedence, and individual files take precedence
 over files in playlists. It is not possible to add directories.
 
 Example of command line use:
-```
+```sh
 playlistfs -f ~/keyboard -f /etc/mtab example.playlist ~/mount_point
 ```
 This will mount a directory at `~/mount_point` with following files:
@@ -98,7 +103,12 @@ This will mount a directory at `~/mount_point` with following files:
 - program → ../bin/program
 
 By default, files are presented as regular files to make copying in file
-managers easier. Supplying `--symlink` options changes them to symlinks.
+managers easier. Supplying `--symlink`/`-s` options changes them to symlinks.
+
+Unmounting is done with `fusermount` program, which is provided by FUSE.
+```sh
+fusermount -u ~/mount_point
+```
 
 ### Automatic mounting
 
@@ -110,9 +120,9 @@ If the directory already exists, it will be unmounted and deleted.
 Note that if a non-empty directory will not be removed if it happens to be
 named like the playlist, though the automatic mounting will not work.
 
-## Licensing
+## License
 
-PlaylistFS, Copyright ® 2018-2020 Aleksandr Bulantcov
+PlaylistFS, Copyright ® 2018-2020,2025 Aleksandr Bulantcov
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
