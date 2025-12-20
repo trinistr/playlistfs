@@ -19,7 +19,7 @@ OBJEXT      := o
 PREFIX      ?= $(HOME)/.local
 
 #man things
-MANGEN      := ./mangen
+MANGEN      := scripts/mangen
 MAN_NAME    := playlist as a file system
 MAN_SECTION := 1
 

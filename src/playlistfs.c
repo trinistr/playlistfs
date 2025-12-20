@@ -1,6 +1,6 @@
 /*
  * This file is part of Playlist File System
- * Copyright ©2018-2020 Aleksandr Bulantcov
+ * Copyright © 2018-2020,2025 Alexander Bulancov
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
