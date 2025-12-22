@@ -22,7 +22,7 @@ pfs_file* pfs_file_create (char* path, __mode_t mode) {
 	pfs_file* file = malloc (sizeof(*file));
 	if (!file)
 		return NULL;
-	file->path = strdup(path);
+	file->path = g_string_new(path);
 	if (!file->path) {
 		free (file);
 		return NULL;
@@ -33,10 +33,10 @@ pfs_file* pfs_file_create (char* path, __mode_t mode) {
 }
 
 void pfs_file_free (pfs_file* file) {
-	free (file->path);
+	g_string_free (file->path, TRUE);
 	free (file);
 }
 
-void pfs_file_free_void (void* m) {
-	pfs_file_free ((pfs_file*)m);
+void pfs_file_free_void (void* file) {
+	pfs_file_free ((pfs_file*)file);
 }

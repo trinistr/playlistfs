@@ -39,39 +39,36 @@
 #endif
 
 typedef struct {
-    char** files;
-    char** lists;
-    char* mount_point;
-    gboolean symlink;
-    struct {
-        gboolean all;
-        gboolean files;
-        gboolean lists;
-    } relative_disabled;
-    gboolean verbose;
-    gboolean quiet;
-    struct {
-        gboolean ro;
-        gboolean noexec;
-        gboolean noatime;
-        gboolean debug;
-    } fuse;
+	char** files;
+	char** lists;
+	char* mount_point;
+	gboolean symlink;
+	struct {
+		gboolean all;
+		gboolean files;
+		gboolean lists;
+	} relative_disabled;
+	gboolean verbose;
+	gboolean show_version;
+	gboolean quiet;
+	struct {
+		gboolean ro;
+		gboolean noexec;
+		gboolean noatime;
+		gboolean debug;
+	} fuse;
 } pfs_options;
 
 typedef struct {
-    pfs_options opts;
-    GHashTable* filetable;
+	pfs_options opts;
+	GHashTable* filetable;
 } pfs_data;
 
 typedef struct {
-    char* path;
-    __mode_t type;
-    char nlinks;
+	GString* path;
+	__mode_t type;
+	char nlinks;
 } pfs_file;
-
-gboolean pfs_parse_options (pfs_options* opts, int argc, char* argv[]);
-gboolean pfs_build_playlist (pfs_data* data);
-gboolean pfs_setup_fuse_arguments (int* fuse_argc, char** fuse_argv[], char* pfs_name, pfs_data* data);
 
 pfs_file* pfs_file_create (char* path, __mode_t mode);
 void pfs_file_free (pfs_file*);

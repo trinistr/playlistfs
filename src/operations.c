@@ -35,13 +35,13 @@ int pfs_getattr (const char* path, struct stat* statbuf) {
 		return 0;
 	}
 	struct fuse_context* context = fuse_get_context ();
-	pfs_data* data =  context->private_data;
+	pfs_data* data = context->private_data;
 	// The path always starts with '/'
 	pfs_file* file = g_hash_table_lookup (data->filetable, path + 1);
 	if (!file)
 		return -ENOENT;
 	if (!data->opts.symlink && !S_ISLNK(file->type)) {
-		if (lstat (file->path, statbuf) < 0)
+		if (lstat (file->path->str, statbuf) < 0)
 			return -errno;
 		if (data->opts.fuse.ro)
 			statbuf->st_mode &= ~0222;
@@ -52,7 +52,7 @@ int pfs_getattr (const char* path, struct stat* statbuf) {
 		statbuf->st_mode = S_IFLNK|0777;
 		statbuf->st_uid = context->uid;
 		statbuf->st_gid = context->gid;
-		statbuf->st_size = strlen (file->path);
+		statbuf->st_size = file->path->len;
 	}
 	statbuf->st_nlink = file->nlinks;
 	return 0;
@@ -63,7 +63,7 @@ int pfs_readlink (const char* path, char* buf, size_t size) {
 	pfs_file* file = g_hash_table_lookup (data->filetable, path + 1);
 	if (!file)
 		return -ENOENT;
-	strncpy (buf, file->path, size);
+	strncpy (buf, file->path->str, size);
 	buf[size - 1] = '\0';
 	return 0;
 }
@@ -121,7 +121,7 @@ int pfs_truncate (const char* path, off_t size) {
 	pfs_file* file = g_hash_table_lookup (data->filetable, path + 1);
 	if (!file)
 		return -ENOENT;
-	if (truncate (file->path, size) < 0)
+	if (truncate (file->path->str, size) < 0)
 		return -errno;
 	return 0;
 }
@@ -131,7 +131,7 @@ int pfs_open (const char* path, struct fuse_file_info* fi) {
 	pfs_file* file = g_hash_table_lookup (data->filetable, path + 1);
 	if (!file)
 		return -ENOENT;
-	int fd = open (file->path, fi->flags);
+	int fd = open (file->path->str, fi->flags);
 	if (fd < 0)
 		return -errno;
 	fi->fh = fd;
@@ -207,7 +207,7 @@ int pfs_access (const char* path, int mode) {
 	pfs_file* file = g_hash_table_lookup (data->filetable, path + 1);
 	if (!file)
 		return -ENOENT;
-	if (access (file->path, mode) < 0)
+	if (access (file->path->str, mode) < 0)
 		return -errno;
 	return 0;
 }
@@ -231,7 +231,7 @@ int pfs_utimens (const char* path, const struct timespec tv[2]) {
 	pfs_file* file = g_hash_table_lookup (data->filetable, path + 1);
 	if (!file)
 		return -ENOENT;
-	if (utimensat (AT_FDCWD, file->path, tv, 0) < 0)
+	if (utimensat (AT_FDCWD, file->path->str, tv, 0) < 0)
 		return -errno;
 	return 0;
 }
