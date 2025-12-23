@@ -114,17 +114,21 @@ int main (int argc, char* argv[]) {
 	if (!pfs_parse_options (&data->opts, argc, argv)) {
 		exit (EXIT_FAILURE);
 	}
+	// When stdout is not a terminal, ensure output is actually outputted in time.
+	fflush(stdout);
 
 	data->filetable = g_hash_table_new_full (g_str_hash, g_str_equal, free, pfs_file_free_void);
 	if (!pfs_build_playlist (data)) {
 		exit (EXIT_FAILURE);
 	}
+	fflush(stdout);
 
 	int fuse_argc = 0;
 	char** fuse_argv = NULL;
 	if (!pfs_setup_fuse_arguments (&fuse_argc, &fuse_argv, argv[0], data)) {
 		exit (EXIT_FAILURE);
 	}
+	fflush(stdout);
 
 	if (!fuse_main (fuse_argc, fuse_argv, &pfs_operations, data)) {
 		printerr ("calling FUSE failed");
@@ -298,11 +302,11 @@ gboolean pfs_build_playlist (
 			if (saved_file == NULL) continue;
 
 			if (0 != stat (saved_file->path->str, &filestat)) {
-				printwarnf ("file '%s' is a directory, ignoring", files[ifile]);
+				printwarnf ("file '%s' is inaccessible, ignoring", files[ifile]);
 				pfs_file_free(saved_file);
 			}
 			else if (S_ISDIR (filestat.st_mode)) {
-				printwarnf ("file '%s' is inaccessible, ignoring", files[ifile]);
+				printwarnf ("file '%s' is a directory, ignoring", files[ifile]);
 				pfs_file_free(saved_file);
 			}
 			else {
@@ -511,6 +515,7 @@ gboolean pfs_parse_options (
 		opts->lists[i - 1] = argv[i];
 	}
 	opts->lists[argc - 1] = NULL;
+
 	return TRUE;
 }
 

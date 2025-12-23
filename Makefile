@@ -57,6 +57,30 @@ install-mime:
 install-mime-default:
 	xdg-mime default $(shell basename $(DISTDIR)/share/applications/*) $(shell grep -o 'type="[^"]*' $(DISTDIR)/share/mime/packages/* | cut -c 7-)
 
+test: $(TARGET)
+	@total=0; failed=0; \
+	for test_file in tests/test*.sh; do \
+		if [ -f "$$test_file" ]; then \
+			total=$$((total + 1)); \
+			echo "=== $$test_file ==="; \
+			chmod +x "$$test_file" 2>/dev/null; \
+			if ./"$$test_file"; then \
+				echo "✓ $$test_file passed"; \
+			else \
+				echo "✗ $$test_file failed"; \
+				failed=$$((failed + 1)); \
+			fi; \
+			echo ""; \
+		fi; \
+	done; \
+	if [ $$failed -eq 0 ]; then \
+		echo "$$total test files executed, all tests nominal!"; \
+		exit 0; \
+	else \
+		echo "$$total test files executed, $$failed failed!"; \
+		exit 1; \
+	fi
+
 #Remake
 remake: cleaner all
 
@@ -103,4 +127,4 @@ $(TARGET).$(MAN_SECTION): $(TARGET)
 	$(MANGEN) $(TARGETDIR)/$(TARGET) "$(MAN_NAME)" $(MAN_SECTION) > $(MANDIR)/$(TARGET).$(MAN_SECTION)
 
 #Non-File Targets
-.PHONY: all remake clean cleaner doc man install install-mime
+.PHONY: all remake clean cleaner doc man install install-mime test

@@ -35,6 +35,13 @@ and run
 make doc
 ```
 
+You can also run tests (compatible with bash and zsh at least):
+```sh
+make test
+```
+
+Project is recompiled automatically before testing.
+
 ## Installing
 
 Quick install:
