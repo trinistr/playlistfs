@@ -25,10 +25,9 @@ MAN_SECTION := 1
 
 #Flags, Libraries and Includes
 DEBUG ?= 0
+CFLAGS  := -Wall -O3 --std=c11 $(shell pkg-config fuse --cflags) $(shell pkg-config glib-2.0 --cflags)
 ifeq ($(DEBUG), 1)
-    CFLAGS  := -Wall -ggdb -O0 --std=c11 $(shell pkg-config fuse --cflags) $(shell pkg-config glib-2.0 --cflags)
-else
-    CFLAGS  := -Wall -O3 --std=c11 $(shell pkg-config fuse --cflags) $(shell pkg-config glib-2.0 --cflags)
+    CFLAGS  := ${CFLAGS} -ggdb -O0
 endif
 LIB         := $(shell pkg-config fuse --libs) $(shell pkg-config glib-2.0 --libs)
 INC         := -I$(INCDIR) -I/usr/include
@@ -57,7 +56,9 @@ install-mime:
 install-mime-default:
 	xdg-mime default $(shell basename $(DISTDIR)/share/applications/*) $(shell grep -o 'type="[^"]*' $(DISTDIR)/share/mime/packages/* | cut -c 7-)
 
-test: $(TARGET)
+test: $(TARGET) test-current
+
+test-current:
 	@total=0; failed=0; \
 	for test_file in tests/test*.sh; do \
 		if [ -f "$$test_file" ]; then \
@@ -127,4 +128,4 @@ $(TARGET).$(MAN_SECTION): $(TARGET)
 	$(MANGEN) $(TARGETDIR)/$(TARGET) "$(MAN_NAME)" $(MAN_SECTION) > $(MANDIR)/$(TARGET).$(MAN_SECTION)
 
 #Non-File Targets
-.PHONY: all remake clean cleaner doc man install install-mime test
+.PHONY: all remake clean cleaner doc man install install-mime test test-current
