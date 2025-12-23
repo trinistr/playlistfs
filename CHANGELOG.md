@@ -8,6 +8,12 @@ Note that versions before 0.3.0 were bumped at pretty much random points in time
 
 ## [v0.3.0]
 
+**Added**
+- Warning message when no lists or files are specified, only a mount point.
+
+**Changed**
+- Allow using `--version`/`-V` together with normal operations.
+
 [Compare v0.2.2...main](https://github.com/trinistr/playlistfs/compare/v0.2.2...main)
 
 ## [v0.2.2] — 2020-09-28

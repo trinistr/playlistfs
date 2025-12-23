@@ -114,21 +114,22 @@ int main (int argc, char* argv[]) {
 	if (!pfs_parse_options (&data->opts, argc, argv)) {
 		exit (EXIT_FAILURE);
 	}
-	// When stdout is not a terminal, ensure output is actually outputted in time.
+	// When stdout/stderr is not a terminal, ensure output is actually outputted in time.
 	fflush(stdout);
+	fflush(stderr);
 
 	data->filetable = g_hash_table_new_full (g_str_hash, g_str_equal, free, pfs_file_free_void);
 	if (!pfs_build_playlist (data)) {
 		exit (EXIT_FAILURE);
 	}
-	fflush(stdout);
+	fflush(stderr);
 
 	int fuse_argc = 0;
 	char** fuse_argv = NULL;
 	if (!pfs_setup_fuse_arguments (&fuse_argc, &fuse_argv, argv[0], data)) {
 		exit (EXIT_FAILURE);
 	}
-	fflush(stdout);
+	fflush(stderr);
 
 	if (!fuse_main (fuse_argc, fuse_argv, &pfs_operations, data)) {
 		printerr ("calling FUSE failed");
@@ -277,9 +278,8 @@ gboolean pfs_build_playlist (
 					}
 					saved_file->type = filestat.st_mode&S_IFMT;
 
-					// Ensure that we don't leak memory on duplicate keys
-					g_hash_table_remove (table, name);
-					g_hash_table_insert (table, name, saved_file);
+					// Replace in case we encountered the name already.
+					g_hash_table_replace (table, name, saved_file);
 				}
 			}
 
@@ -321,10 +321,13 @@ gboolean pfs_build_playlist (
 				}
 				saved_file->type = filestat.st_mode&S_IFMT;
 
-				g_hash_table_remove (table, name);
-				g_hash_table_insert (table, name, saved_file);
+				g_hash_table_replace (table, name, saved_file);
 			}
 		}
+	}
+
+	if (g_hash_table_size(table) == 0) {
+		printwarn("no lists or files specified, mounting empty filesystem");
 	}
 
 	if (cwd)
@@ -496,8 +499,6 @@ gboolean pfs_parse_options (
 		if (argc == 1) {
 			printerr ("no target mount point");
 			return FALSE;
-		} else if (argc == 2) {
-			if (!opts->quiet) fputs ("warning: no lists or files specified, mounting empty filesystem\n", stderr);
 		}
 		opts->mount_point = argv[--argc];
 	}

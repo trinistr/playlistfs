@@ -1,8 +1,9 @@
-- empty filesystem warning when no lists are given, but -f is provided
 - include only basename of playlist in fsname
+- custom filesystem name via option (--fsname)
 - (?) use lstat instead of stat for original files when building table
 - handle dereferencing or not of symlinks
 - (?) actually implement atime touching (though shouldn't it just work?)
 - rename --symlink to --symlinks
 - --unmount/-u option (use fusermount -u)
 - (?) redo --no-relative-* as positive options and flags
+- (?) add option to mount over non-empty directory
