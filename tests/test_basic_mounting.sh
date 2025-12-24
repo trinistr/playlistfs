@@ -1,7 +1,7 @@
 #!/bin/sh
 
 TESTS_BASE="$(dirname "$(realpath "$0")")"
-source "$TESTS_BASE/setup.sh"
+. "$TESTS_BASE/setup.sh"
 
 run_test "Mounting" test_mount "$TESTS_BASE/fixtures/test.playlist"
 run_test "Absolute paths" test -f "$TEST_MOUNT_POINT/hosts" -a -f "$TEST_MOUNT_POINT/fstab"

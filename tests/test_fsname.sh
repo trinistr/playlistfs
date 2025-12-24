@@ -1,7 +1,7 @@
 #!/bin/sh
 
 TESTS_BASE="$(dirname "$(realpath "$0")")"
-source "$TESTS_BASE/setup.sh"
+. "$TESTS_BASE/setup.sh"
 
 test_mount -f "$(fixture fstab.playlist)" -f "$(fixture fstab)"
 run_test "Only --file: fsname has no special name" grep "playlistfs" "/proc/mounts" -q

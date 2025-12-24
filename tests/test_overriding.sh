@@ -1,7 +1,7 @@
 #!/bin/sh
 
 TESTS_BASE="$(dirname "$(realpath "$0")")"
-source "$TESTS_BASE/setup.sh"
+. "$TESTS_BASE/setup.sh"
 
 run_test "Mounting with two lists" test_mount "$(fixture test.playlist)" "$(fixture fstab.playlist)"
 run_test "File override works" grep "MY FSTAB CONTENT" "$TEST_MOUNT_POINT/fstab" -q

@@ -1,7 +1,7 @@
 #!/bin/sh
 
 TESTS_BASE="$(dirname "$(realpath "$0")")"
-source "$TESTS_BASE/setup.sh"
+. "$TESTS_BASE/setup.sh"
 
 cool_mount() {
     (cd "$TESTS_BASE"; test_mount "$1" "$(fixture test.playlist)" -f "fixtures/fstab" -f "$(fixture script.sh)")
