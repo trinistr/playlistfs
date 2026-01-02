@@ -17,6 +17,7 @@
  */
 
 #include "playlistfs.h"
+#include "pfs_libgen.h"
 
 // Defined in operations.c.
 extern struct fuse_operations pfs_operations;
@@ -28,12 +29,6 @@ extern struct fuse_operations pfs_operations;
 #define printinfo(x) {if(data->opts.verbose) fputs(x "\n", stderr);}
 #define printinfof(x, s) {if(data->opts.verbose) fprintf(stderr, x "\n", s);}
 
-static GOptionContext* pfs_setup_options (
-	pfs_options* opts
-);
-static gboolean pfs_parse_options (
-	pfs_options* opts, int argc, char* argv[]
-);
 static gboolean pfs_build_playlist (
 	pfs_data* data
 );
@@ -49,14 +44,27 @@ static pfs_file* pfs_build_playlist_create_pfs_file_absolute (
 static pfs_file* pfs_build_playlist_create_pfs_file_relative (
 	pfs_data* data, char* path, size_t length, char* buffer, gboolean relative_disabled, GString* relative_base
 );
-static gboolean pfs_setup_fuse_arguments (
-	int* fuse_argc, char** fuse_argv[], char* pfs_name, pfs_data* data
+
+static GOptionContext* pfs_setup_options (
+	pfs_options* opts
+);
+static gboolean pfs_parse_options (
+	pfs_options* opts, int argc, char* argv[]
 );
 static gboolean pfs_check_mount_point (
 	char* mount_point
 );
 
+static gboolean pfs_setup_fuse_arguments (
+	int* fuse_argc, char** fuse_argv[], char* pfs_name, pfs_data* data
+);
+static gboolean pfs_setup_fuse_fsname (
+	int argc, char* argv[], pfs_data* data
+);
+
 int main (int argc, char* argv[]) {
+	setlocale(LC_ALL, "");
+
 	pfs_data* data = calloc (1, sizeof (*data));
 	if (!data) {
 		printerr ("memory allocation failed");
@@ -86,57 +94,9 @@ int main (int argc, char* argv[]) {
 	return fuse_main (fuse_argc, fuse_argv, &pfs_operations, data);
 }
 
-static gboolean pfs_setup_fuse_arguments (
-	int* argc, char** argv[], char* pfs_name, pfs_data* data
-) {
-	int fuse_argc = 0;
-	char** fuse_argv = malloc (sizeof (*fuse_argv) * 16);
-	if(!fuse_argv) {
-		printerr ("memory allocation failed");
-		return FALSE;
-	}
-
-	fuse_argv[fuse_argc++] = pfs_name;
-	fuse_argv[fuse_argc++] = data->opts.mount_point;
-	fuse_argv[fuse_argc++] = "-odefault_permissions";
-	fuse_argv[fuse_argc++] = "-osubtype=playlistfs";
-	if (data->opts.lists[0]) {
-		fuse_argv[fuse_argc] = malloc (22 + strlen (data->opts.lists[0]) + 1);
-		if(!fuse_argv[fuse_argc]) {
-			printerr ("memory allocation failed");
-			free (fuse_argv);
-			return FALSE;
-		}
-		sprintf (fuse_argv[fuse_argc++], "-ofsname=playlistfs-'%s'", data->opts.lists[0]);
-	}
-	else {
-		fuse_argv[fuse_argc++] = "-ofsname=playlistfs";
-	}
-	printinfo ("Passing options to FUSE:");
-	if (data->opts.fuse.debug) {
-		fuse_argv[fuse_argc++] = "-d";
-		printinfo ("\t-d (debug mode)");
-	}
-	if (data->opts.fuse.ro) {
-		fuse_argv[fuse_argc++] = "-r";
-		printinfo ("\t-r (read-only mode)");
-	}
-	if (data->opts.fuse.noatime) {
-		fuse_argv[fuse_argc++] = "-onoatime";
-		printinfo ("\t-o noatime (do not update access time)");
-	}
-	if (data->opts.fuse.noexec) {
-		fuse_argv[fuse_argc++] = "-onoexec";
-		printinfo ("\t-o noexec (do not allow execution)");
-	}
-	if ( !(data->opts.fuse.debug || data->opts.fuse.ro
-			|| data->opts.fuse.noatime || data->opts.fuse.noexec) )
-		printinfo ("\tno options to pass");
-
-	*argc = fuse_argc;
-	*argv = fuse_argv;
-	return TRUE;
-}
+/*
+---- Playlist building ----
+*/
 
 static gboolean pfs_build_playlist (
 	pfs_data* data
@@ -162,8 +122,8 @@ static gboolean pfs_build_playlist (
 				printwarnf ("list '%s' could not be opened", lists[ilist]);
 				continue;
 			}
-			char* listpath = dirname(lists[ilist]);
-			printinfof ("Reading list '%s'", lists[ilist]);
+			char* listpath = pfs_dirname(lists[ilist]);
+			printinfof ("Reading list '%s':", lists[ilist]);
 
 			GString* relative_base = NULL;
 			if (listpath[0] == '/') {
@@ -205,7 +165,7 @@ static gboolean pfs_build_playlist (
 					pfs_file_free(saved_file);
 				}
 				else {
-					char* name = strdup (basename (path));
+					char* name = pfs_basename (path);
 					if (!name) {
 						printerr ("memory allocation failed");
 						if (saved_file)
@@ -231,7 +191,7 @@ static gboolean pfs_build_playlist (
 			}
 			if (relative_base)
 				g_string_free(relative_base, TRUE);
-			printinfof ("Done with list '%s'", lists[ilist]);
+			free(listpath);
 		}
 	}
 
@@ -250,7 +210,7 @@ static gboolean pfs_build_playlist (
 				pfs_file_free(saved_file);
 			}
 			else {
-				char* name = strdup (basename (files[ifile]));
+				char* name = pfs_basename (files[ifile]);
 				if (!name) {
 					printerr ("memory allocation failed");
 					if (saved_file)
@@ -355,6 +315,10 @@ static pfs_file* pfs_build_playlist_create_pfs_file_relative (
 	return saved_file;
 }
 
+/*
+---- Option parsing ----
+*/
+
 static GOptionContext* pfs_setup_options (
 	pfs_options* opts
 ) {
@@ -393,6 +357,7 @@ static GOptionContext* pfs_setup_options (
 		{ "read-only", 'r', G_OPTION_FLAG_NONE, G_OPTION_ARG_NONE, &opts->fuse.ro, "Mount file system as read-only", NULL},
 		{ "noexec", 0, G_OPTION_FLAG_NONE, G_OPTION_ARG_NONE, &opts->fuse.noexec, "Do not allow execution of files", NULL},
 		{ "noatime", 0, G_OPTION_FLAG_NONE, G_OPTION_ARG_NONE, &opts->fuse.noatime, "Do not update time of access", NULL},
+		{ "fsname", 0, G_OPTION_FLAG_NONE, G_OPTION_ARG_STRING, &opts->fuse.fsname, "Set filesystem name", "NAME"},
 		{ "debug", 'd', G_OPTION_FLAG_NONE, G_OPTION_ARG_NONE, &opts->fuse.debug, "Enable debugging mode", NULL},
 		{}
 	};
@@ -477,4 +442,85 @@ static gboolean pfs_check_mount_point (
 		printerr ("mount target is not accessible");
 		return FALSE;
 	}
+}
+
+/*
+---- Arguments to FUSE ----
+*/
+
+static gboolean pfs_setup_fuse_arguments (
+	int* argc, char** argv[], char* pfs_name, pfs_data* data
+) {
+	int fuse_argc = 0;
+	char** fuse_argv = malloc (sizeof (*fuse_argv) * 16);
+	if(!fuse_argv) {
+		printerr ("memory allocation failed");
+		return FALSE;
+	}
+
+	fuse_argv[fuse_argc++] = pfs_name;
+	fuse_argv[fuse_argc++] = data->opts.mount_point;
+	fuse_argv[fuse_argc++] = "-odefault_permissions";
+	fuse_argv[fuse_argc++] = "-osubtype=playlistfs";
+
+	printinfo ("Passing options to FUSE:");
+	if (pfs_setup_fuse_fsname(fuse_argc++, fuse_argv, data) == FALSE) {
+		return FALSE;
+	}
+	printinfof ("\t%s (filesystem name)", fuse_argv[fuse_argc - 1]);
+
+	if (data->opts.fuse.debug) {
+		fuse_argv[fuse_argc++] = "-d";
+		printinfo ("\t-d (debug mode)");
+	}
+	if (data->opts.fuse.ro) {
+		fuse_argv[fuse_argc++] = "-r";
+		printinfo ("\t-r (read-only mode)");
+	}
+	if (data->opts.fuse.noatime) {
+		fuse_argv[fuse_argc++] = "-onoatime";
+		printinfo ("\t-onoatime (do not update access time)");
+	}
+	if (data->opts.fuse.noexec) {
+		fuse_argv[fuse_argc++] = "-onoexec";
+		printinfo ("\t-onoexec (do not allow execution)");
+	}
+
+	*argc = fuse_argc;
+	*argv = fuse_argv;
+	return TRUE;
+}
+
+static gboolean pfs_setup_fuse_fsname (
+	int fuse_argc, char* fuse_argv[], pfs_data* data
+) {
+	if (data->opts.fuse.fsname != NULL) {
+		fuse_argv[fuse_argc] = malloc (10 + strlen (data->opts.fuse.fsname));
+		if(!fuse_argv[fuse_argc]) {
+			printerr ("memory allocation failed");
+			free (fuse_argv);
+			return FALSE;
+		}
+		sprintf (fuse_argv[fuse_argc], "-ofsname=%s", data->opts.fuse.fsname);
+	}
+	else if (data->opts.lists[0]) {
+		char* name = strrchr (data->opts.lists[0], '/');
+		if (name == NULL) {
+			name = data->opts.lists[0];
+		}
+		else {
+			name++;
+		}
+		fuse_argv[fuse_argc] = malloc (10 + strlen (name));
+		if(!fuse_argv[fuse_argc]) {
+			printerr ("memory allocation failed");
+			free (fuse_argv);
+			return FALSE;
+		}
+		sprintf (fuse_argv[fuse_argc], "-ofsname=%s", name);
+	}
+	else {
+		fuse_argv[fuse_argc] = "-ofsname=playlistfs";
+	}
+	return TRUE;
 }

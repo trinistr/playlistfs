@@ -9,11 +9,19 @@ Note that versions before 0.3.0 were bumped at pretty much random points in time
 ## [v0.3.0]
 
 **Added**
+- An autotest system to ensure at least some quality.
 - Warning message when no lists or files are specified, only a mount point.
+- `--fsname` option to set a custom filesystem name.
 
 **Changed**
 - Allow using `--version`/`-V` together with normal operations.
-- `make install*` targets have been changed again: `install-bin` and `install-man` can be used to install binary and man page separately.
+- `make install*` targets have been changed again: `install-bin` and `install-man` can be used to install the binary and man page separately.
+- Change default fsname to basename of the first list (including extensions), or "playlistfs" if there are no lists, without any quotation marks.
+
+**Fixed**
+- In verbose display, lists names now display fully (previously, it was just dirname).
+- In verbose display, relative paths in lists now display both relative and absolute paths.
+- Probably some undiscovered bugs related to handling current directory and relative paths.
 
 [Compare v0.2.2...main](https://github.com/trinistr/playlistfs/compare/v0.2.2...main)
 

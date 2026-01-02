@@ -33,7 +33,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <errno.h>
-#include <libgen.h>
+#include <locale.h>
 
 #ifndef PLAYLISTFS_VERSION
 #define PLAYLISTFS_VERSION "0.2.2"
@@ -57,6 +57,7 @@ typedef struct {
 		gboolean noexec;
 		gboolean noatime;
 		gboolean debug;
+		gchar* fsname;
 	} fuse;
 } pfs_options;
 

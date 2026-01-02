@@ -3,15 +3,15 @@
 TEST_ROOT="$(dirname "$(realpath "$0")")"
 . "$TEST_ROOT/setup.sh"
 
-run_test "Mounting" test_mount "$TEST_ROOT/fixtures/test.playlist"
-run_test "Absolute paths" test -f "$TEST_MOUNT_POINT/hosts" -a -f "$TEST_MOUNT_POINT/fstab"
-run_test "Relative paths" test -f "$TEST_MOUNT_POINT/test.playlist"
+run_test "Mounting with a list" test_mount "$TEST_ROOT/fixtures/test.playlist"
+run_test "Absolute paths exist" test -f "$TEST_MOUNT_POINT/hosts" -a -f "$TEST_MOUNT_POINT/fstab"
+run_test "Relative paths exist" test -f "$TEST_MOUNT_POINT/test.playlist"
 run_test "File info: user-owned" compare_file_info "$TEST_MOUNT_POINT/test.playlist" "$TEST_ROOT/fixtures/test.playlist"
 run_test "File info: root-owned" compare_file_info "$TEST_MOUNT_POINT/fstab" "/etc/fstab"
 
 cleanup
 run_test "Fails without arguments" sh -c '! "$BIN"'
-run_test "Prints an error" sh -c "'$BIN' 2>&1 \
+run_test "Prints an error that no mount point is specified" sh -c "'$BIN' 2>&1 \
     | grep -Fq 'error: no target mount point'"
 
 cleanup
