@@ -1,6 +1,6 @@
 /*
  * This file is part of Playlist File System
- * Copyright © 2018-2020,2025 Alexander Bulancov
+ * Copyright © 2018-2026 Alexander Bulancov
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,57 +17,9 @@
  */
 
 #include "playlistfs.h"
-#include <playlistfs.h>
 
-// Allowed operations. Unused ones are commented out,
-// deprecated are not listed at all
-static struct fuse_operations pfs_operations = {
-	.getattr = pfs_getattr,
-	.readlink = pfs_readlink,// For symlink mode
-	//.mknod = pfs_mknod, // No file creation. Regular files should use .create
-	//.mkdir = pfs_mkdir,
-	//.rmdir = pfs_rmdir,
-	.unlink = pfs_unlink,
-	.symlink = pfs_symlink,
-	.rename = pfs_rename,
-	.link = pfs_link,
-	//.chmod = pfs_chmod, // Maybe these two should not actually be allowed?
-	//.chown = pfs_chown,
-	.truncate = pfs_truncate, // Questionable
-	.open = pfs_open,
-	.read = pfs_read,
-	.write = pfs_write,
-	.statfs = pfs_statfs, // = statvfs
-	//.flush = pfs_flush,
-	.release = pfs_release, // Files need to be closed
-	.fsync = pfs_fsync,
-	//.setxatr = pfs_setxattr, // These four will not be defined for now
-	//.getxattr = pfs_getxattr,
-	//.listxattr = pfs_listxattr,
-	//.removexattr = pfs_removexattr,
-	.opendir = pfs_opendir, // Need to actually check if this gets called on root
-	.readdir = pfs_readdir,
-	.releasedir = pfs_releasedir, // Directories also need to be closed, or do they?
-	//.fsyncdir = pfs_fsyncdir, //Can be called on root, probably
-	//.init = pfs_init, // These two are not necessarily useful
-	.destroy = pfs_destroy,
-	.access = pfs_access, // default_permissions negates the need for this
-	//.create = pfs_create, // No file creation
-	.ftruncate = pfs_ftruncate, // Seems that this one can just call truncate
-	.fgetattr = pfs_fgetattr, // The same
-	//.lock = pfs_lock, // Implemented by kernel (not needed for local FS)
-	.utimens = pfs_utimens, // Use utimensat
-	//.bmap = pfs_bmap, // This FS is not backed by a device
-	//.ioctl = pfs_ioctl,
-	//.poll = pfs_poll,
-	//.write_buf = pfs_write_buf, // Unclear that these do
-	//.read_buf = pfs_read_buf,
-	//.flock = pfs_flock, //The same as lock()
-	.fallocate = pfs_fallocate,
-	.flag_nullpath_ok = 0, // Files can not be removed, so we never work with them
-	.flag_nopath = 0, // May be allowed, as file handles are probably enough
-	.flag_utime_omit_ok = 1, // This will be proxied, so it is okay
-};
+// Defined in operations.c.
+extern struct fuse_operations pfs_operations;
 
 #define printwarn(x) {if(!data->opts.quiet) fputs("warning: " x "\n", stderr);}
 #define printwarnf(x, s) {if(!data->opts.quiet) fprintf(stderr, "warning: " x "\n", s);}
@@ -76,31 +28,31 @@ static struct fuse_operations pfs_operations = {
 #define printinfo(x) {if(data->opts.verbose) fputs(x "\n", stderr);}
 #define printinfof(x, s) {if(data->opts.verbose) fprintf(stderr, x "\n", s);}
 
-GOptionContext* pfs_setup_options (
+static GOptionContext* pfs_setup_options (
 	pfs_options* opts
 );
-gboolean pfs_parse_options (
+static gboolean pfs_parse_options (
 	pfs_options* opts, int argc, char* argv[]
 );
-gboolean pfs_build_playlist (
+static gboolean pfs_build_playlist (
 	pfs_data* data
 );
-GString* pfs_build_playlist_get_cwd (
+static GString* pfs_build_playlist_get_cwd (
 	pfs_data* data
 );
-pfs_file* pfs_build_playlist_create_pfs_file (
+static pfs_file* pfs_build_playlist_create_pfs_file (
 	pfs_data* data, char* path, char* buffer, gboolean relative_disabled, GString* relative_base
 );
-pfs_file* pfs_build_playlist_create_pfs_file_absolute (
+static pfs_file* pfs_build_playlist_create_pfs_file_absolute (
 	pfs_data* data, char* path
 );
-pfs_file* pfs_build_playlist_create_pfs_file_relative (
+static pfs_file* pfs_build_playlist_create_pfs_file_relative (
 	pfs_data* data, char* path, size_t length, char* buffer, gboolean relative_disabled, GString* relative_base
 );
-gboolean pfs_setup_fuse_arguments (
+static gboolean pfs_setup_fuse_arguments (
 	int* fuse_argc, char** fuse_argv[], char* pfs_name, pfs_data* data
 );
-gboolean pfs_check_mount_point (
+static gboolean pfs_check_mount_point (
 	char* mount_point
 );
 
@@ -131,22 +83,10 @@ int main (int argc, char* argv[]) {
 	}
 	fflush(stderr);
 
-	if (!fuse_main (fuse_argc, fuse_argv, &pfs_operations, data)) {
-		printerr ("calling FUSE failed");
-		exit (EXIT_FAILURE);
-	}
-
-	free(fuse_argv[4]);
-	free(fuse_argv);
-	g_hash_table_unref (data->filetable);
-	free(data->opts.files);
-	free(data->opts.lists);
-	free(data);
-
-	return EXIT_SUCCESS;
+	return fuse_main (fuse_argc, fuse_argv, &pfs_operations, data);
 }
 
-gboolean pfs_setup_fuse_arguments (
+static gboolean pfs_setup_fuse_arguments (
 	int* argc, char** argv[], char* pfs_name, pfs_data* data
 ) {
 	int fuse_argc = 0;
@@ -198,7 +138,7 @@ gboolean pfs_setup_fuse_arguments (
 	return TRUE;
 }
 
-gboolean pfs_build_playlist (
+static gboolean pfs_build_playlist (
 	pfs_data* data
 ) {
 	char** lists = data->opts.lists;
@@ -336,7 +276,7 @@ gboolean pfs_build_playlist (
 	return TRUE;
 }
 
-GString* pfs_build_playlist_get_cwd (
+static GString* pfs_build_playlist_get_cwd (
 	pfs_data* data
 ) {
 	if (data->opts.relative_disabled.all) return NULL;
@@ -358,7 +298,7 @@ GString* pfs_build_playlist_get_cwd (
 	return cwd;
 }
 
-pfs_file* pfs_build_playlist_create_pfs_file (
+static pfs_file* pfs_build_playlist_create_pfs_file (
 	pfs_data* data, char* path, char* buffer, gboolean relative_disabled, GString* relative_base
 ) {
 	size_t length = strnlen (path, PATH_MAX);
@@ -379,7 +319,7 @@ pfs_file* pfs_build_playlist_create_pfs_file (
 	}
 }
 
-pfs_file* pfs_build_playlist_create_pfs_file_absolute (
+static pfs_file* pfs_build_playlist_create_pfs_file_absolute (
 	pfs_data* data, char* path
 ) {
 	pfs_file* saved_file = NULL;
@@ -390,7 +330,7 @@ pfs_file* pfs_build_playlist_create_pfs_file_absolute (
 	return saved_file;
 }
 
-pfs_file* pfs_build_playlist_create_pfs_file_relative (
+static pfs_file* pfs_build_playlist_create_pfs_file_relative (
 	pfs_data* data, char* path, size_t length, char* buffer, gboolean relative_disabled, GString* relative_base
 ) {
 	pfs_file* saved_file = NULL;
@@ -415,7 +355,7 @@ pfs_file* pfs_build_playlist_create_pfs_file_relative (
 	return saved_file;
 }
 
-GOptionContext* pfs_setup_options (
+static GOptionContext* pfs_setup_options (
 	pfs_options* opts
 ) {
 	GOptionContext* optionContext = g_option_context_new ("[LIST...] [MOUNT_DIR]");
@@ -425,20 +365,20 @@ GOptionContext* pfs_setup_options (
 	}
 
 	g_option_context_set_summary (
-		optionContext, "PlaylistFS mounts a FUSE filesystem with files taken from user-supplied list(s)."
+		optionContext, "PlaylistFS mounts a FUSE filesystem with files taken from user-supplied list(s) or specified on command line."
 	);
 	g_option_context_set_help_enabled (optionContext, TRUE);
 
 	GOptionEntry options[] = {
 		{ "target", 't', G_OPTION_FLAG_NONE, G_OPTION_ARG_FILENAME, &opts->mount_point, "Set mount point explicitly", "MOUNT_DIR"},
-		{ "file", 'f', G_OPTION_FLAG_NONE, G_OPTION_ARG_FILENAME_ARRAY, &opts->files, "Add a single file to playlist", "FILE"},
+		{ "file", 'f', G_OPTION_FLAG_NONE, G_OPTION_ARG_FILENAME_ARRAY, &opts->files, "Add a single file, overriding any lists", "FILE"},
 		{ "no-relative", 'n', G_OPTION_FLAG_NONE, G_OPTION_ARG_NONE, &opts->relative_disabled.all, "Disable relative path handling", NULL},
 		{ "relative", 0, G_OPTION_FLAG_HIDDEN|G_OPTION_FLAG_REVERSE, G_OPTION_ARG_NONE, &opts->relative_disabled.all, NULL, NULL},
 		{ "no-relative-files", 0, G_OPTION_FLAG_NONE, G_OPTION_ARG_NONE, &opts->relative_disabled.files, "Disable relative path handling for files added with -f", NULL},
 		{ "relatve-files", 0, G_OPTION_FLAG_HIDDEN|G_OPTION_FLAG_REVERSE, G_OPTION_ARG_NONE, &opts->relative_disabled.files, NULL, NULL},
 		{ "no-relative-lists", 0, G_OPTION_FLAG_NONE, G_OPTION_ARG_NONE, &opts->relative_disabled.lists, "Disable relative path handling in LISTs", NULL},
 		{ "relatve-lists", 0, G_OPTION_FLAG_HIDDEN|G_OPTION_FLAG_REVERSE, G_OPTION_ARG_NONE, &opts->relative_disabled.lists, NULL, NULL},
-		{ "symlink", 's', G_OPTION_FLAG_NONE, G_OPTION_ARG_NONE, &opts->symlink, "Create symlinks instead of regular files", NULL},
+		{ "symlink", 's', G_OPTION_FLAG_NONE, G_OPTION_ARG_NONE, &opts->symlink, "Show symlinks instead of regular files", NULL},
 		{ "verbose", 'v', G_OPTION_FLAG_NONE, G_OPTION_ARG_NONE, &opts->verbose, "Describe what is happening", NULL},
 		{ "quiet", 'q', G_OPTION_FLAG_NONE, G_OPTION_ARG_NONE, &opts->quiet, "Suppress warnings", NULL},
 		{ "version", 'V', G_OPTION_FLAG_NONE, G_OPTION_ARG_NONE, &opts->show_version, "Display version information", NULL},
@@ -462,7 +402,7 @@ GOptionContext* pfs_setup_options (
 	return optionContext;
 }
 
-gboolean pfs_parse_options (
+static gboolean pfs_parse_options (
 	pfs_options* opts, int argc, char* argv[]
 ) {
 	GOptionContext* optionContext = pfs_setup_options (opts);
@@ -481,7 +421,7 @@ gboolean pfs_parse_options (
 	if (opts->show_version) {
 		puts (
 			"playlistfs " PLAYLISTFS_VERSION "\n"
-			"Copyright (C) 2018-2020,2025 Alexander Bulancov\n"
+			"Copyright (C) 2018-2026 Alexander Bulancov\n"
 			"This is free software; see the source for copying conditions.\n"
 			"There is NO warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE."
 		);
@@ -520,7 +460,7 @@ gboolean pfs_parse_options (
 	return TRUE;
 }
 
-gboolean pfs_check_mount_point (
+static gboolean pfs_check_mount_point (
 	char* mount_point
 ) {
 	struct stat mountstat;

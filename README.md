@@ -5,16 +5,17 @@
 PlaylistFS is a FUSE filesystem that allows to easily fill a directory
 with disparate files, similar to UnionFS, but much simpler.
 
-PlaylistFS uses "playlists" to organize files conveniently, and provdes
+PlaylistFS uses "playlists" to organize files conveniently, and provides
 a way to mount them automatically, but can also use multiple lists
 to pull everything in one place. Files in PlaylistFS work similar
-to symlinks, but are presented as regular files by default.
+to symlinks, but are presented as regular files by default,
+with all operations proxied to original files.
 
 Some examples of what PlaylistFS can be used for:
 - presenting your playlists in filesystem, not just in an audio player
   (that's where the name comes from!)
 - organizing a library by genres or authors without copying files
-- putting library header files into a single directory for reference
+- putting header files of libraries into a single directory for reference
 
 ## Compiling
 
@@ -149,13 +150,13 @@ umount ~/mount_point
 ### Automatic mounting
 
 PlaylistFS comes with `text/x-playlist` MIME type. It is defined by `*.playlist` glob.
-Corresponding file is installed by `make install-mime`.
+Corresponding definition is installed by `make install-mime`.
 `make install-mime-default` will also register the provided handler as default.
 
 If a default handler is registered, it is possible to automatically mount and
-unmount playlists. This is done by 'opening' .playlist files in file manager.
+unmount playlists. This is done by 'opening' **.playlist** files in file manager.
 Provided handler script will create an empty directory, with name formed by
-removing .playlist extension from the file, and mount this playlist there.
+removing **.playlist** extension from the file, and mount this playlist there.
 If the directory already exists, it will be unmounted and deleted instead.
 Note that if a non-empty directory will not be removed if it happens to be
 named like the playlist, and the automatic mounting will not work.

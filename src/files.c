@@ -1,6 +1,6 @@
 /*
  * This file is part of Playlist File System
- * Copyright © 2018-2020,2025 Alexander Bulancov
+ * Copyright © 2018-2026 Alexander Bulancov
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,8 +16,13 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <playlistfs.h>
+#include "playlistfs.h"
 
+/*
+Create a new pfs_file.
+@parameter path: The path of the file
+@parameter mode: The mode of the file
+*/
 pfs_file* pfs_file_create (char* path, __mode_t mode) {
 	pfs_file* file = malloc (sizeof(*file));
 	if (!file)
@@ -32,11 +37,19 @@ pfs_file* pfs_file_create (char* path, __mode_t mode) {
 	return file;
 }
 
+/*
+Free a pfs_file. Should only be called if deleted from the file table.
+@parameter file: The pfs_file to free
+*/
 void pfs_file_free (pfs_file* file) {
 	g_string_free (file->path, TRUE);
 	free (file);
 }
 
+/*
+Same as pfs_file_free, but for use with g_hash_table_foreach.
+@parameter file: The pfs_file to free
+*/
 void pfs_file_free_void (void* file) {
 	pfs_file_free ((pfs_file*)file);
 }

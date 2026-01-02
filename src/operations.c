@@ -1,6 +1,6 @@
 /*
  * This file is part of Playlist File System
- * Copyright © 2018-2020,2025 Alexander Bulancov
+ * Copyright © 2018-2026 Alexander Bulancov
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,19 +16,97 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <playlistfs.h>
+#include "playlistfs.h"
 
-//void* pfs_init (struct fuse_conn_info *conn) {
-//	return fuse_get_context ()->private_data;
-//}
+static void* pfs_init (struct fuse_conn_info *conn);
+static void pfs_destroy (void *);
+static int pfs_getattr (const char *, struct stat *);
+static int pfs_readlink (const char *, char *, size_t);
+static int pfs_unlink (const char *);
+static int pfs_symlink (const char* path, const char* link);
+static int pfs_rename (const char *, const char *);
+static int pfs_link (const char *, const char *);
+static int pfs_truncate (const char *, off_t);
+static int pfs_open (const char *, struct fuse_file_info *);
+static int pfs_read (const char *, char *, size_t, off_t, struct fuse_file_info *);
+static int pfs_write (const char *, const char *, size_t, off_t, struct fuse_file_info *);
+static int pfs_statfs (const char *, struct statvfs *);
+static int pfs_release (const char *, struct fuse_file_info *);
+static int pfs_fsync (const char *, int, struct fuse_file_info *);
+static int pfs_opendir (const char *, struct fuse_file_info *);
+static int pfs_readdir (const char *, void *, fuse_fill_dir_t, off_t, struct fuse_file_info *);
+static int pfs_releasedir (const char *, struct fuse_file_info *);
+static int pfs_access (const char *, int);
+static int pfs_ftruncate (const char *, off_t, struct fuse_file_info *);
+static int pfs_fgetattr (const char *, struct stat *, struct fuse_file_info *);
+static int pfs_utimens (const char *, const struct timespec tv[2]);
+static int pfs_fallocate (const char *, int, off_t, off_t, struct fuse_file_info *);
 
-void pfs_destroy (void* userdata) {
-	pfs_data* data = userdata;
+/*
+This struct is exported to playlistfs.c.
+
+Allowed operations. Unused ones are commented out,
+deprecated are not listed at all.
+*/
+struct fuse_operations pfs_operations = {
+	.init = pfs_init, // These two are not necessarily useful
+	.destroy = pfs_destroy,
+	.getattr = pfs_getattr,
+	.readlink = pfs_readlink,// For symlink mode and symlinks in general
+	//.mknod = pfs_mknod, // No file creation. Regular files should use .create anyway
+	//.mkdir = pfs_mkdir,
+	//.rmdir = pfs_rmdir,
+	.unlink = pfs_unlink,
+	.symlink = pfs_symlink,
+	.rename = pfs_rename,
+	.link = pfs_link,
+	//.chmod = pfs_chmod, // Maybe these two should not actually be allowed?
+	//.chown = pfs_chown,
+	.truncate = pfs_truncate, // Questionable
+	.open = pfs_open,
+	.read = pfs_read,
+	.write = pfs_write,
+	.statfs = pfs_statfs, // = statvfs
+	//.flush = pfs_flush,
+	.release = pfs_release, // Files need to be closed
+	.fsync = pfs_fsync,
+	//.setxatr = pfs_setxattr, // These four will not be defined for now
+	//.getxattr = pfs_getxattr,
+	//.listxattr = pfs_listxattr,
+	//.removexattr = pfs_removexattr,
+	.opendir = pfs_opendir, // Need to actually check if this gets called on root
+	.readdir = pfs_readdir,
+	.releasedir = pfs_releasedir, // Directories also need to be closed, or do they?
+	//.fsyncdir = pfs_fsyncdir, //Can be called on root, probably
+	.access = pfs_access, // default_permissions negates the need for this
+	//.create = pfs_create, // No file creation
+	.ftruncate = pfs_ftruncate, // Seems that this one can just call truncate
+	.fgetattr = pfs_fgetattr, // The same
+	//.lock = pfs_lock, // Implemented by kernel (not needed for local FS)
+	.utimens = pfs_utimens, // Use utimensat
+	//.bmap = pfs_bmap, // This FS is not backed by a device
+	//.ioctl = pfs_ioctl,
+	//.poll = pfs_poll,
+	//.write_buf = pfs_write_buf, // Unclear that these do
+	//.read_buf = pfs_read_buf,
+	//.flock = pfs_flock, //The same as lock()
+	.fallocate = pfs_fallocate,
+	.flag_nullpath_ok = 0, // Files can not be removed, so we never work with them // But they can be removed?
+	.flag_nopath = 0, // May be allowed, as file handles are probably enough
+	.flag_utime_omit_ok = 1, // This will be proxied, so it is okay
+};
+
+static void* pfs_init (struct fuse_conn_info *conn) {
+	return fuse_get_context ()->private_data;
+}
+
+static void pfs_destroy (void* private_data) {
+	pfs_data* data = private_data;
 	g_hash_table_unref (data->filetable);
 	free (data);
 }
 
-int pfs_getattr (const char* path, struct stat* statbuf) {
+static int pfs_getattr (const char* path, struct stat* statbuf) {
 	if (0 == strcmp (path, "/")) {
 		statbuf->st_mode = S_IFDIR | 0777;
 		statbuf->st_nlink = 2;
@@ -58,7 +136,7 @@ int pfs_getattr (const char* path, struct stat* statbuf) {
 	return 0;
 }
 
-int pfs_readlink (const char* path, char* buf, size_t size) {
+static int pfs_readlink (const char* path, char* buf, size_t size) {
 	pfs_data* data = fuse_get_context ()->private_data;
 	pfs_file* file = g_hash_table_lookup (data->filetable, path + 1);
 	if (!file)
@@ -68,7 +146,7 @@ int pfs_readlink (const char* path, char* buf, size_t size) {
 	return 0;
 }
 
- int pfs_link (const char* path, const char* newpath) {
+static int pfs_link (const char* path, const char* newpath) {
 	pfs_data* data = fuse_get_context ()->private_data;
 	pfs_file* file = g_hash_table_lookup (data->filetable, path + 1);
 	if (!file || S_ISDIR(file->type))
@@ -81,7 +159,7 @@ int pfs_readlink (const char* path, char* buf, size_t size) {
 	return 0;
  }
 
-int pfs_unlink (const char* path) {
+static int pfs_unlink (const char* path) {
 	pfs_data* data = fuse_get_context ()->private_data;
 	pfs_file* file;
 	char* key;
@@ -93,7 +171,7 @@ int pfs_unlink (const char* path) {
 	return 0;
 }
 
-int pfs_rename (const char* path, const char* newpath) {
+static int pfs_rename (const char* path, const char* newpath) {
 	pfs_data* data = fuse_get_context ()->private_data;
 	pfs_file* file = NULL;
 	char* key = NULL;
@@ -105,7 +183,7 @@ int pfs_rename (const char* path, const char* newpath) {
 	return 0;
 }
 
-int pfs_symlink (const char* path, const char* link) {
+static int pfs_symlink (const char* path, const char* link) {
 	pfs_data* data = fuse_get_context ()->private_data;
 	pfs_file* file = g_hash_table_lookup (data->filetable, link + 1);
 	if (file) {
@@ -116,7 +194,7 @@ int pfs_symlink (const char* path, const char* link) {
 	return 0;
 }
 
-int pfs_truncate (const char* path, off_t size) {
+static int pfs_truncate (const char* path, off_t size) {
 	pfs_data* data = fuse_get_context ()->private_data;
 	pfs_file* file = g_hash_table_lookup (data->filetable, path + 1);
 	if (!file)
@@ -126,7 +204,7 @@ int pfs_truncate (const char* path, off_t size) {
 	return 0;
 }
 
-int pfs_open (const char* path, struct fuse_file_info* fi) {
+static int pfs_open (const char* path, struct fuse_file_info* fi) {
 	pfs_data* data = fuse_get_context ()->private_data;
 	pfs_file* file = g_hash_table_lookup (data->filetable, path + 1);
 	if (!file)
@@ -138,19 +216,19 @@ int pfs_open (const char* path, struct fuse_file_info* fi) {
 	return 0;
 }
 
-int pfs_read (const char* path, char* buf, size_t size, off_t offset, struct fuse_file_info* fi) {
+static int pfs_read (const char* path, char* buf, size_t size, off_t offset, struct fuse_file_info* fi) {
 	return pread (fi->fh, buf, size, offset);
 }
 
-int pfs_write (const char* path, const char* buf, size_t size, off_t offset, struct fuse_file_info* fi) {
+static int pfs_write (const char* path, const char* buf, size_t size, off_t offset, struct fuse_file_info* fi) {
 	return pwrite (fi->fh, buf, size, offset);
 }
 
-int pfs_release (const char* path, struct fuse_file_info* fi) {
+static int pfs_release (const char* path, struct fuse_file_info* fi) {
 	return close (fi->fh);
 }
 
-int pfs_statfs (const char* path, struct statvfs* statbuf) {
+static int pfs_statfs (const char* path, struct statvfs* statbuf) {
 	pfs_data* data = fuse_get_context ()->private_data;
 	statbuf->f_files = g_hash_table_size (data->filetable);
 	statbuf->f_ffree = 0;
@@ -159,7 +237,7 @@ int pfs_statfs (const char* path, struct statvfs* statbuf) {
 	return 0;
 }
 
-int pfs_fsync (const char* path, int datasync, struct fuse_file_info* fi) {
+static int pfs_fsync (const char* path, int datasync, struct fuse_file_info* fi) {
 	if (datasync)
 		return fdatasync (fi->fh);
 	else
@@ -168,14 +246,14 @@ int pfs_fsync (const char* path, int datasync, struct fuse_file_info* fi) {
 
 // TODO: handle all directories
 
-int pfs_opendir (const char* path, struct fuse_file_info* fi) {
+static int pfs_opendir (const char* path, struct fuse_file_info* fi) {
 	if (0 != strcmp (path, "/"))
 		return -ENOENT;
 	// pfs_data* data = fuse_get_context ()->private_data;
 	return 0;
 }
 
-int pfs_readdir (const char* path, void* buf, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info* fi) {
+static int pfs_readdir (const char* path, void* buf, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info* fi) {
 	if (0 != strcmp (path, "/"))
 		return -ENOENT;
 	pfs_data* data = fuse_get_context ()->private_data;
@@ -193,14 +271,14 @@ int pfs_readdir (const char* path, void* buf, fuse_fill_dir_t filler, off_t offs
 	return 0;
 }
 
-int pfs_releasedir (const char* path, struct fuse_file_info* fi) {
+static int pfs_releasedir (const char* path, struct fuse_file_info* fi) {
 	if (0 != strcmp (path, "/"))
 		return -ENOENT;
 	// pfs_data* data = fuse_get_context ()->private_data;
 	return 0;
 }
 
-int pfs_access (const char* path, int mode) {
+static int pfs_access (const char* path, int mode) {
 	if (0 == strcmp(path, "/"))
 		return 0;
 	pfs_data* data = fuse_get_context ()->private_data;
@@ -212,13 +290,13 @@ int pfs_access (const char* path, int mode) {
 	return 0;
 }
 
-int pfs_ftruncate (const char* path, off_t size, struct fuse_file_info* fi) {
+static int pfs_ftruncate (const char* path, off_t size, struct fuse_file_info* fi) {
 	if (ftruncate (fi->fh, size) < 0)
 		return -errno;
 	return 0;
 }
 
-int pfs_fgetattr (const char* path, struct stat* statbuf, struct fuse_file_info* fi) {
+static int pfs_fgetattr (const char* path, struct stat* statbuf, struct fuse_file_info* fi) {
 	if (0 == strcmp (path, "/"))
 		return pfs_getattr (path, statbuf);
 	if (fstat (fi->fh, statbuf) < 0)
@@ -226,7 +304,7 @@ int pfs_fgetattr (const char* path, struct stat* statbuf, struct fuse_file_info*
 	return 0;
 }
 
-int pfs_utimens (const char* path, const struct timespec tv[2]) {
+static int pfs_utimens (const char* path, const struct timespec tv[2]) {
 	pfs_data* data = fuse_get_context ()->private_data;
 	pfs_file* file = g_hash_table_lookup (data->filetable, path + 1);
 	if (!file)
@@ -236,7 +314,7 @@ int pfs_utimens (const char* path, const struct timespec tv[2]) {
 	return 0;
 }
 
-int pfs_fallocate (const char* path, int mode, off_t offset, off_t length, struct fuse_file_info* fi) {
+static int pfs_fallocate (const char* path, int mode, off_t offset, off_t length, struct fuse_file_info* fi) {
 	fputs("\nALLOCATE\n", stderr);
 	if (fallocate (fi->fh, mode, offset, length) < 0)
 		return -errno;
