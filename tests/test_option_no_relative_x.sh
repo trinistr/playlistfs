@@ -1,10 +1,11 @@
 #!/bin/sh
 
-TESTS_BASE="$(dirname "$(realpath "$0")")"
-. "$TESTS_BASE/setup.sh"
+TEST_ROOT="$(dirname "$(realpath "$0")")"
+. "$TEST_ROOT/setup.sh"
 
 cool_mount() {
-    (cd "$TESTS_BASE"; test_mount "$1" "$(fixture test.playlist)" -f "fixtures/fstab" -f "$(fixture script.sh)")
+    # cd to use a relative path
+    (cd "$TEST_ROOT"; test_mount "$1" "$(fixture test.playlist)" -f "fixtures/fstab" -f "$(fixture script.sh)")
 }
 
 run_test "--no-relative mount" cool_mount --no-relative 

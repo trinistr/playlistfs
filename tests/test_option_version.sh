@@ -1,7 +1,7 @@
 #!/bin/sh
 
-TESTS_BASE="$(dirname "$(realpath "$0")")"
-. "$TESTS_BASE/setup.sh"
+TEST_ROOT="$(dirname "$(realpath "$0")")"
+. "$TEST_ROOT/setup.sh"
 
 run_test "--version run" "$BIN" --version
 run_test "Outputs current version with --version" sh -c "'$BIN' --version | grep -Pq 'playlistfs [0-9]+\.[0-9]+\.[0-9]+'"

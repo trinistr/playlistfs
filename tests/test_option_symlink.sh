@@ -1,7 +1,7 @@
 #!/bin/sh
 
-TESTS_BASE="$(dirname "$(realpath "$0")")"
-. "$TESTS_BASE/setup.sh"
+TEST_ROOT="$(dirname "$(realpath "$0")")"
+. "$TEST_ROOT/setup.sh"
 
 run_test "--symlink mount" test_mount --symlink "$(fixture test.playlist)"
 run_test "File is a symlink" test "q$(extract_mode "$TEST_MOUNT_POINT/test.playlist")" = "qlrwxrwxrwx"

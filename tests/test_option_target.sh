@@ -1,7 +1,7 @@
 #!/bin/sh
 
-TESTS_BASE="$(dirname "$(realpath "$0")")"
-. "$TESTS_BASE/setup.sh"
+TEST_ROOT="$(dirname "$(realpath "$0")")"
+. "$TEST_ROOT/setup.sh"
 
 cleanup
 run_test "--target mount" "$BIN" --target "$TEST_MOUNT_POINT" "$(fixture test.playlist)"

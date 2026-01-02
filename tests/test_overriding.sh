@@ -1,7 +1,7 @@
 #!/bin/sh
 
-TESTS_BASE="$(dirname "$(realpath "$0")")"
-. "$TESTS_BASE/setup.sh"
+TEST_ROOT="$(dirname "$(realpath "$0")")"
+. "$TEST_ROOT/setup.sh"
 
 run_test "Mounting with two lists" test_mount "$(fixture test.playlist)" "$(fixture fstab.playlist)"
 run_test "File override works" grep "MY FSTAB CONTENT" "$TEST_MOUNT_POINT/fstab" -q
@@ -17,4 +17,3 @@ echo "This is my fstab" > "$TEST_TMP/fstab"
 echo "fstab" > "$TEST_TMP/fstabbiest.playlist"
 run_test "Mounting with three lists!" test_mount "$(fixture fstab.playlist)" "$(fixture test.playlist)" "$TEST_TMP/fstabbiest.playlist"
 run_test "Three lists override each other in order" compare_file_info "$TEST_MOUNT_POINT/fstab" "$TEST_TMP/fstab"
-rm "$TEST_TMP/fstab" "$TEST_TMP/fstabbiest.playlist"
