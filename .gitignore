@@ -1,7 +1,6 @@
 playlistfs
+dist/share/man
 *.o
 *.d
 *.gch
 *.pch
-*.gz
-

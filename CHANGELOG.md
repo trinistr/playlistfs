@@ -13,6 +13,7 @@ Note that versions before 0.3.0 were bumped at pretty much random points in time
 
 **Changed**
 - Allow using `--version`/`-V` together with normal operations.
+- `make install*` targets have been changed again: `install-bin` and `install-man` can be used to install binary and man page separately.
 
 [Compare v0.2.2...main](https://github.com/trinistr/playlistfs/compare/v0.2.2...main)
 

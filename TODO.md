@@ -1,4 +1,3 @@
-- fix error when installing without manpage
 - include only basename of playlist in fsname
 - custom filesystem name via option (--fsname)
 - (?) use lstat instead of stat for original files when building table

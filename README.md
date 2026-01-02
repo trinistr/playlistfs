@@ -43,16 +43,9 @@ Archlinux and Archlinux-based distros (like Manjaro):
 pacman -S fuse2 glib2
 ```
 
-To compile `playlistfs`, it is enough to run
-```sh
-make
-```
-
-If you want to also generate a very simple man page, install `help2man` package
-and run
-```sh
-make doc
-```
+To compile `playlistfs`, it is enough to run `make` (or `make bin`).
+If you want to also generate a very simple man page, run `make man`
+(this requires `help2man` and `gzip`).
 
 All artifacts and supplementary files are stored in `dist/` directory.
 
@@ -74,12 +67,13 @@ make install-all
 ```
 
 Installation can be done in several steps:
-- `make install` will install only the compiled binary and man page;
+- `make install` will install the compiled binary and man page;
+  - `make install-bin` and `make install-man` install binary and man page separately;
 - `make install-mime` will install files needed for automatic mounting;
 - `make install-mime-default` will register the provided handler as default.
 
 By default, files are installed in `~/.local` tree. This can be changed by
-supplying a PREFIX variable to make:
+supplying a PREFIX variable to invocation of `make`:
 ```sh
 PREFIX=/usr make install-all
 ```
@@ -163,7 +157,7 @@ named like the playlist, and the automatic mounting will not work.
 
 ## License
 
-PlaylistFS, Copyright ® 2018-2020,2025 Alexander Bulancov
+PlaylistFS, Copyright ® 2018-2026 Alexander Bulancov
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
