@@ -10,12 +10,13 @@ Note that versions before 0.3.0 were bumped at pretty much random points in time
 
 **Added**
 - Support for FUSE 3.
+  - There is no attempt to force compatibility. All capabilities are in the default state.
 - FUSE and FUSE_VERSION flags for `make`.
   - FUSE=3 is default, can be set to FUSE=2 to compile against libfuse2.
   - FUSE_VERSION can set desired FUSE_USE_VERSION to use newer features of libfuse. By default it is either 35 or 29, depending on FUSE flag.
 
 **Changed**
-- Some flags passed to fuse were removed for compatibility, so behavior may be slightly different with unlinked files.
+- `--version`/`-V` now outputs build date and libfuse's version the binary was built against.
 
 [Compare v0.3.1...main](https://github.com/trinistr/playlistfs/compare/v0.3.1...main)
 

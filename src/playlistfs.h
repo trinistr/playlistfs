@@ -42,7 +42,17 @@
 
 #ifndef PLAYLISTFS_VERSION
 #define PLAYLISTFS_VERSION "0.3.1"
+
+#define STRINGIFY(x) STRINGIFY_X(x)
+#define STRINGIFY_X(x) #x
+#ifndef BUILD_DATE
+#define BUILD_DATE __DATE__
 #endif
+#ifndef FUSE_LIB_VERSION
+#define FUSE_LIB_VERSION STRINGIFY(FUSE_USE_VERSION)
+#endif
+#define PLAYLISTFS_METADATA " (built " BUILD_DATE " with libfuse " FUSE_LIB_VERSION ")"
+#endif // PLAYLISTFS_VERSION
 
 typedef struct {
 	char** files;

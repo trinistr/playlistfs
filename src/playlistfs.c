@@ -408,7 +408,7 @@ static gboolean pfs_parse_options (
 
 	if (opts->show_version) {
 		puts (
-			"playlistfs " PLAYLISTFS_VERSION "\n"
+			"PlaylistFS " PLAYLISTFS_VERSION PLAYLISTFS_METADATA "\n"
 			"Copyright (C) 2018-2026 Alexander Bulancov\n"
 			"This is free software; see the source for copying conditions.\n"
 			"There is NO warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE."

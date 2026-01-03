@@ -29,17 +29,17 @@ FUSE ?= 3 # Set to 2 to use FUSE 2
 DEBUG ?= 0 # Set to 1 to deoptimize and enable gdb support
 SANITIZER ?= 0 # Set to 1 to enable ASan and extra diagnostics in tests
 
-CFLAGS += -Wall -O3 --std=c11 $(shell pkg-config glib-2.0 --cflags)
+CFLAGS += -Wall -O3 --std=c11 -DBUILD_DATE=\"$(shell date +%Y-%m-%d)\" $(shell pkg-config glib-2.0 --cflags)
 LDFLAGS += $(shell pkg-config glib-2.0 --libs)
 RUNFLAGS +=
 
 ifeq ($(FUSE), 2)
 	FUSE_VERSION ?= 29
-    CFLAGS += -DFUSE_USE_VERSION=$(FUSE_VERSION) $(shell pkg-config fuse --cflags)
+    CFLAGS += -DFUSE_USE_VERSION=$(FUSE_VERSION) $(shell pkg-config fuse --cflags) -DFUSE_LIB_VERSION=\"$(shell pkg-config fuse --modversion)\"
 	LDFLAGS += $(shell pkg-config fuse --libs)
 else
 	FUSE_VERSION ?= 35
-    CFLAGS += -DFUSE_USE_VERSION=$(FUSE_VERSION) $(shell pkg-config fuse3 --cflags)
+    CFLAGS += -DFUSE_USE_VERSION=$(FUSE_VERSION) $(shell pkg-config fuse3 --cflags) -DFUSE_LIB_VERSION=\"$(shell pkg-config fuse3 --modversion)\"
 	LDFLAGS += $(shell pkg-config fuse3 --libs)
 endif
 
