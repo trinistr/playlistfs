@@ -8,6 +8,14 @@ Note that versions before 0.3.0 were bumped at pretty much random points in time
 
 ## [Next]
 
+**Added**
+- SANITIZE=1 flag to `make` to enable ASan. `SANITIZE=1 make test` will also add ASAN_OPTIONS to enable even more diagnostics.
+
+**Fixed**
+- Buffer overflow in start-up code.
+
+[Compare v0.3.0...main](https://github.com/trinistr/playlistfs/compare/v0.3.0...main)
+
 ## [v0.3.0]
 
 This update is focused on rewriting internals to make the code more maintainable and less error-prone. Nonetheless, there are a couple of new features and bugfixes.

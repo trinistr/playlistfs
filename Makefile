@@ -26,11 +26,20 @@ MAN_SECTION := 1
 
 #Flags, Libraries and Includes
 DEBUG ?= 0
-CFLAGS := -Wall -O3 --std=c11 $(shell pkg-config fuse --cflags) $(shell pkg-config glib-2.0 --cflags)
+SANITIZER ?= 0
+
+CFLAGS += -Wall -O3 --std=c11 $(shell pkg-config fuse --cflags) $(shell pkg-config glib-2.0 --cflags)
+LDFLAGS += $(shell pkg-config fuse --libs) $(shell pkg-config glib-2.0 --libs)
+RUNFLAGS +=
 ifeq ($(DEBUG), 1)
     CFLAGS += -ggdb -O0
 endif
-LIB         := $(shell pkg-config fuse --libs) $(shell pkg-config glib-2.0 --libs)
+ifeq ($(SANITIZER), 1)
+    CFLAGS += -fsanitize=address -fsanitize-address-use-after-scope
+    LDFLAGS += -fsanitize=address
+	RUNFLAGS += ASAN_OPTIONS=strict_string_checks=1:detect_stack_use_after_return=1:check_initialization_order=1:strict_init_order=1
+endif
+
 INC         := -I$(INCDIR) -I/usr/include
 INCDEP      := -I$(INCDIR)
 
@@ -68,7 +77,8 @@ test-current:
 			total=$$((total + 1)); \
 			echo "=== $$test_file ==="; \
 			chmod +x "$$test_file" 2>/dev/null; \
-			if ./"$$test_file"; then \
+			$(RUNFLAGS) ./"$$test_file"; \
+			if [ $$? -eq 0 ]; then \
 				echo "✓ $$test_file passed"; \
 			else \
 				echo "✗ $$test_file failed"; \
@@ -120,7 +130,7 @@ OBJECTS := $(patsubst $(SRCDIR)/%,$(BUILDDIR)/%,$(SOURCES:.$(SRCEXT)=.$(OBJEXT))
 
 #Link
 $(TARGETDIR)/$(TARGET): $(OBJECTS)
-	$(CC) -o $(TARGETDIR)/$(TARGET) $^ $(LIB)
+	$(CC) -o $(TARGETDIR)/$(TARGET) $^ $(LDFLAGS)
 
 #Compile
 $(BUILDDIR)/%.$(OBJEXT): $(SRCDIR)/%.$(SRCEXT)

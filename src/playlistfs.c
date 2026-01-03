@@ -428,7 +428,7 @@ static gboolean pfs_parse_options (
 			printerr ("no target mount point");
 			return FALSE;
 		}
-		opts->mount_point = g_malloc (sizeof (*opts->mount_point) * strlen(argv[--argc]));
+		opts->mount_point = g_malloc (sizeof (*opts->mount_point) * (strlen(argv[--argc]) + 1));
 		strcpy (opts->mount_point, argv[argc]);
 	}
 
