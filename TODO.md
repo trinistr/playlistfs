@@ -4,5 +4,9 @@
 - rename --symlink to --symlinks
 - --unmount/-u option (use fusermount -u / umount)
 - (?) redo --no-relative-* as positive options and flags
+- Fix --no-relative overwriting --relative-* options
 - (?) add option to mount over non-empty directory (will always work in FUSE 3 anyway)
 - Fix memory leaks in operations
+- Add optional failures when something can't be accessed instead of skipping
+- (?) s/PATH_MAX/NAME_MAX + 1/
+- Impose (large) limits on paths to prevent runaway allocation

@@ -101,9 +101,7 @@ static void* pfs_init (struct fuse_conn_info *conn) {
 }
 
 static void pfs_destroy (void* private_data) {
-	pfs_data* data = private_data;
-	g_hash_table_unref (data->filetable);
-	free (data);
+	pfs_free_pfs_data ((pfs_data*) private_data);
 }
 
 static int pfs_getattr (const char* path, struct stat* statbuf) {

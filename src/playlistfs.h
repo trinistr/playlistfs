@@ -24,11 +24,13 @@
 #define _GNU_SOURCE // GNU fallocate()
 #define _FILE_OFFSET_BITS 64 // FUSE requires 64-bit off_t
 
-#include <string.h>
 #include <fuse.h>
 #include <glib.h>
+
+#include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <limits.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
@@ -57,7 +59,7 @@ typedef struct {
 		gboolean noexec;
 		gboolean noatime;
 		gboolean debug;
-		gchar* fsname;
+		char* fsname;
 	} fuse;
 } pfs_options;
 
@@ -65,6 +67,8 @@ typedef struct {
 	pfs_options opts;
 	GHashTable* filetable;
 } pfs_data;
+
+void pfs_free_pfs_data (pfs_data* data);
 
 typedef struct {
 	GString* path;

@@ -19,47 +19,32 @@
 #include "playlistfs.h"
 #include "pfs_libgen.h"
 
+#ifndef PATH_MAX
+// For now, this will be a hard limit in case it is not defined.
+#define PATH_MAX 4096
+#endif
+
 // Defined in operations.c.
 extern struct fuse_operations pfs_operations;
 
 #define printwarn(x) {if(!data->opts.quiet) fputs("warning: " x "\n", stderr);}
-#define printwarnf(x, s) {if(!data->opts.quiet) fprintf(stderr, "warning: " x "\n", s);}
+#define printwarnf(x, ...) {if(!data->opts.quiet) fprintf(stderr, "warning: " x "\n", __VA_ARGS__);}
 #define printerr(x) fputs("error: " x "\n", stderr)
-#define printerrf(x, s) fprintf(stderr, "error: " x "\n", s)
+#define printerrf(x, ...) fprintf(stderr, "error: " x "\n", __VA_ARGS__)
 #define printinfo(x) {if(data->opts.verbose) fputs(x "\n", stderr);}
-#define printinfof(x, s) {if(data->opts.verbose) fprintf(stderr, x "\n", s);}
+#define printinfof(x, ...) {if(data->opts.verbose) fprintf(stderr, x "\n", __VA_ARGS__);}
 
-static gboolean pfs_build_playlist (
-	pfs_data* data
-);
-static GString* pfs_build_playlist_get_cwd (
-	pfs_data* data
-);
-static pfs_file* pfs_build_playlist_create_pfs_file (
-	pfs_data* data, char* path, char* buffer, gboolean relative_disabled, GString* relative_base
-);
-static pfs_file* pfs_build_playlist_create_pfs_file_absolute (
-	pfs_data* data, char* path
-);
-static pfs_file* pfs_build_playlist_create_pfs_file_relative (
-	pfs_data* data, char* path, size_t length, char* buffer, gboolean relative_disabled, GString* relative_base
-);
-
-static GOptionContext* pfs_setup_options (
-	pfs_options* opts
-);
 static gboolean pfs_parse_options (
 	pfs_options* opts, int argc, char* argv[]
 );
 static gboolean pfs_check_mount_point (
-	char* mount_point
+	pfs_data* data
 );
-
+static gboolean pfs_build_playlist (
+	pfs_data* data
+);
 static gboolean pfs_setup_fuse_arguments (
 	int* fuse_argc, char** fuse_argv[], char* pfs_name, pfs_data* data
-);
-static gboolean pfs_setup_fuse_fsname (
-	int argc, char* argv[], pfs_data* data
 );
 
 int main (int argc, char* argv[]) {
@@ -72,6 +57,9 @@ int main (int argc, char* argv[]) {
 	}
 
 	if (!pfs_parse_options (&data->opts, argc, argv)) {
+		exit (EXIT_FAILURE);
+	}
+	if (!pfs_check_mount_point (data)) {
 		exit (EXIT_FAILURE);
 	}
 	// When stdout/stderr is not a terminal, ensure output is actually outputted in time.
@@ -94,9 +82,42 @@ int main (int argc, char* argv[]) {
 	return fuse_main (fuse_argc, fuse_argv, &pfs_operations, data);
 }
 
+void pfs_free_pfs_data (pfs_data* data) {
+	if (data->opts.files != NULL)
+		g_strfreev (data->opts.files);
+	if (data->opts.lists != NULL)
+		free (data->opts.lists);
+	if (data->opts.fuse.fsname != NULL)
+		free (data->opts.fuse.fsname);
+	if (data->opts.mount_point != NULL)
+		g_free (data->opts.mount_point);
+	if (data->filetable != NULL)
+		g_hash_table_unref (data->filetable);
+	free (data);
+}
+
 /*
 ---- Playlist building ----
 */
+
+static GString* pfs_build_playlist_get_cwd (
+	pfs_data* data
+);
+static gboolean pfs_build_playlist_process_list (
+	pfs_data* data, GHashTable* filetable, GString* cwd, char* listpath
+);
+static gboolean pfs_build_playlist_process_path (
+	pfs_data* data, GHashTable* filetable, GString* relative_base, char* path
+);
+static char* pfs_build_playlist_get_full_path (
+	pfs_data* data, GString* relative_base, char* path
+);
+static char* pfs_build_playlist_get_full_path_from_absolute (
+	pfs_data* data, char* path
+);
+static char* pfs_build_playlist_get_full_path_from_relative (
+	pfs_data* data, GString* relative_base, char* path, size_t length
+);
 
 static gboolean pfs_build_playlist (
 	pfs_data* data
@@ -104,11 +125,6 @@ static gboolean pfs_build_playlist (
 	char** lists = data->opts.lists;
 	char** files = data->opts.files;
 	GHashTable* table = data->filetable;
-	
-	char buffer[PATH_MAX];
-	char path[PATH_MAX];
-	struct stat filestat;
-	pfs_file* saved_file = NULL;
 
 	GString* cwd = pfs_build_playlist_get_cwd(data);
 	if (!cwd && !data->opts.relative_disabled.all) {
@@ -117,126 +133,21 @@ static gboolean pfs_build_playlist (
 
 	if (lists != NULL) {
 		for (size_t ilist = 0; lists[ilist]; ilist++) {
-			FILE* list = fopen (lists[ilist], "rt");
-			if (!list) {
-				printwarnf ("list '%s' could not be opened", lists[ilist]);
-				continue;
+			if (!pfs_build_playlist_process_list(data, table, cwd, lists[ilist])) {
+				return FALSE;
 			}
-			char* listpath = pfs_dirname(lists[ilist]);
-			printinfof ("Reading list '%s':", lists[ilist]);
-
-			GString* relative_base = NULL;
-			if (listpath[0] == '/') {
-				relative_base = g_string_new(listpath);
-				g_string_append_c(relative_base, '/');
-			}
-			else if (cwd) {
-				relative_base = g_string_new_len(cwd->str, cwd->len);
-				g_string_append(relative_base, listpath);
-				g_string_append_c(relative_base, '/');
-			}
-			else if (!data->opts.relative_disabled.all) {
-				printwarnf ("relative paths will be ignored for list '%s'", lists[ilist]);
-			}
-
-			while (fgets (path, PATH_MAX, list)) {
-				size_t length = strlen (path);
-				if (path[0] == '\n' || length == 0) {
-					continue;
-				}
-				else if (path[length - 1] == '\n') {
-					path[length - 1] = '\0';
-				}
-				else if (length == PATH_MAX - 1) {
-					printwarn ("filename too long, ignoring");
-					while (fgetc(list) != '\n' && !feof(list) && !ferror(list)) {}
-					continue;
-				}
-
-				saved_file = pfs_build_playlist_create_pfs_file(data, path, buffer, data->opts.relative_disabled.lists, relative_base);
-				if (saved_file == NULL) continue;
-
-				if (0 != stat (saved_file->path->str, &filestat)) {
-					printwarnf ("file '%s' is inaccessible, ignoring", path);
-					pfs_file_free(saved_file);
-				}
-				else if (S_ISDIR (filestat.st_mode)) {
-					printwarnf ("file '%s' is a directory, ignoring", path);
-					pfs_file_free(saved_file);
-				}
-				else {
-					char* name = pfs_basename (path);
-					if (!name) {
-						printerr ("memory allocation failed");
-						if (saved_file) {
-							pfs_file_free (saved_file);
-							saved_file = NULL;
-						}
-						if (relative_base) {
-							g_string_free (relative_base, TRUE);
-							relative_base = NULL;
-						}
-						if (cwd) {
-							g_string_free (cwd, TRUE);
-							cwd = NULL;
-						}
-						return FALSE;
-					}
-					saved_file->type = filestat.st_mode&S_IFMT;
-
-					// Replace in case we encountered the name already.
-					g_hash_table_replace (table, name, saved_file);
-				}
-			}
-
-			if (feof (list)) {
-				fclose (list);
-			}
-			else {
-				printwarnf ("error when reading list '%s'", lists[ilist]);
-			}
-			if (relative_base) {
-				g_string_free (relative_base, TRUE);
-				relative_base = NULL;
-			}
-			free (listpath);
-			listpath = NULL;
 		}
 	}
 
 	if (files != NULL) {
+		GString* files_relative_base = NULL;
+		if (!data->opts.relative_disabled.files) {
+			files_relative_base = cwd;
+		}
 		printinfo ("Adding individual files:");
 		for (size_t ifile = 0; files[ifile]; ifile++) {
-			saved_file = pfs_build_playlist_create_pfs_file(data, files[ifile], buffer, data->opts.relative_disabled.files, cwd);
-			if (saved_file == NULL) continue;
-
-			if (0 != stat (saved_file->path->str, &filestat)) {
-				printwarnf ("file '%s' is inaccessible, ignoring", files[ifile]);
-				pfs_file_free (saved_file);
-				saved_file = NULL;
-			}
-			else if (S_ISDIR (filestat.st_mode)) {
-				printwarnf ("file '%s' is a directory, ignoring", files[ifile]);
-				pfs_file_free (saved_file);
-				saved_file = NULL;
-			}
-			else {
-				char* name = pfs_basename (files[ifile]);
-				if (!name) {
-					printerr ("memory allocation failed");
-					if (saved_file) {
-						pfs_file_free (saved_file);
-						saved_file = NULL;
-					}
-					if (cwd) {
-						g_string_free (cwd, TRUE);
-						cwd = NULL;
-					}
-					return FALSE;
-				}
-				saved_file->type = filestat.st_mode&S_IFMT;
-
-				g_hash_table_replace (table, name, saved_file);
+			if (!pfs_build_playlist_process_path(data, table, files_relative_base, files[ifile])) {
+				return FALSE;
 			}
 		}
 	}
@@ -245,7 +156,7 @@ static gboolean pfs_build_playlist (
 		printwarn("no lists or files specified, mounting empty filesystem");
 	}
 
-	if (cwd){
+	if (cwd) {
 		g_string_free (cwd, TRUE);
 		cwd = NULL;
 	}
@@ -275,61 +186,155 @@ static GString* pfs_build_playlist_get_cwd (
 	return cwd;
 }
 
-static pfs_file* pfs_build_playlist_create_pfs_file (
-	pfs_data* data, char* path, char* buffer, gboolean relative_disabled, GString* relative_base
+static gboolean pfs_build_playlist_process_list (
+	pfs_data* data, GHashTable* filetable, GString* cwd, char* listpath
+) {
+	FILE* list = fopen (listpath, "rt");
+	if (!list) {
+		printwarnf ("list '%s' could not be opened, skipping", listpath);
+		return TRUE;
+	}
+	printinfof ("Reading list '%s':", listpath);
+
+	GString* relative_base = NULL;
+	
+	if (!data->opts.relative_disabled.lists) {
+		char* dirpath = NULL;
+		dirpath = pfs_dirname(listpath);
+		if (dirpath == NULL) {
+			printwarnf ("Could not determine directory for list '%s', relative paths will be ignored", listpath);
+		}
+		else {
+			if (dirpath[0] == '/') {
+				relative_base = g_string_new(dirpath);
+				g_string_append_c(relative_base, '/');
+			}
+			else if (cwd) {
+				relative_base = g_string_new_len(cwd->str, cwd->len);
+				g_string_append(relative_base, dirpath);
+				g_string_append_c(relative_base, '/');
+			}
+			else {
+				printwarnf ("relative paths will be ignored for list '%s'", listpath);
+			}
+			free (dirpath);
+		}
+	}
+
+	char path[PATH_MAX];
+	while (fgets (path, PATH_MAX, list)) {
+		size_t length = strlen (path);
+		if (path[0] == '\n' || length == 0) {
+			continue;
+		}
+		else if (path[length - 1] == '\n') {
+			path[length - 1] = '\0';
+		}
+		else if (length == PATH_MAX - 1) {
+			printwarn ("filename too long, ignoring");
+			while (fgetc(list) != '\n' && !feof(list) && !ferror(list)) {}
+			continue;
+		}
+
+		pfs_build_playlist_process_path(data, filetable, relative_base, path);
+	}
+
+	if (feof (list)) {
+		fclose (list);
+	}
+	else {
+		printwarnf ("error when reading list '%s'", listpath);
+	}
+
+	if (relative_base) {
+		g_string_free (relative_base, TRUE);
+	}
+
+	return TRUE;
+}
+
+static gboolean pfs_build_playlist_process_path (
+	pfs_data* data, GHashTable* filetable, GString* relative_base, char* path
+) {
+	char* full_path = pfs_build_playlist_get_full_path(data, relative_base, path);
+	if (full_path == NULL) {
+		// Something happened, warning was already printed, skip file. 
+		return TRUE;
+	}
+
+	struct stat filestat;
+	if (0 != stat (full_path, &filestat)) {
+		printwarnf ("file '%s' is inaccessible, ignoring", path);
+	}
+	else if (S_ISDIR (filestat.st_mode)) {
+		printwarnf ("file '%s' is a directory, ignoring", path);
+	}
+	else {
+		char* name = pfs_basename (path);
+		pfs_file* file = pfs_file_create (full_path, filestat.st_mode);
+		if (!name || !file) {
+			printerr ("memory allocation failed");
+			return FALSE;
+		}
+		
+		// Replace in case we encountered the name already.
+		g_hash_table_replace (filetable, name, file);
+	}
+	free (full_path);
+
+	return TRUE;
+}
+
+static char* pfs_build_playlist_get_full_path (
+	pfs_data* data, GString* relative_base, char* path
 ) {
 	size_t length = strnlen (path, PATH_MAX);
 	if (length == 0) {
 		printwarn ("empty filename, ignoring");
 		return NULL;
 	}
-	if (length >= PATH_MAX) {
-		printwarn ("filename too long, ignoring");
-		return NULL;
-	}
 
 	if (path[0] == '/') {
-		return pfs_build_playlist_create_pfs_file_absolute(data, path);
+		return pfs_build_playlist_get_full_path_from_absolute(data, path);
 	}
 	else {
-		return pfs_build_playlist_create_pfs_file_relative(data, path, length, buffer, relative_disabled, relative_base);
+		return pfs_build_playlist_get_full_path_from_relative(data, relative_base, path, length);
 	}
 }
 
-static pfs_file* pfs_build_playlist_create_pfs_file_absolute (
+static char* pfs_build_playlist_get_full_path_from_absolute (
 	pfs_data* data, char* path
 ) {
-	pfs_file* saved_file = NULL;
-
 	// Absolute paths are already complete, no additional processing needed.
-	saved_file = pfs_file_create (path, 0);
+	// We could call realpath(), but it can fail for overly long paths.
+	// In this case, we trust that the user knows what they are doing.
 	printinfof ("\t%s", path);
-	return saved_file;
+	return strdup (path);
 }
 
-static pfs_file* pfs_build_playlist_create_pfs_file_relative (
-	pfs_data* data, char* path, size_t length, char* buffer, gboolean relative_disabled, GString* relative_base
+static char* pfs_build_playlist_get_full_path_from_relative (
+	pfs_data* data, GString* relative_base, char* path, size_t length
 ) {
-	pfs_file* saved_file = NULL;
+	char* full_path = NULL;
 	
 	// Relative paths need more checks and handling.
-	if (relative_disabled || relative_base == NULL) {
+	if (relative_base == NULL) {
 		printinfof ("Ignoring relative path '%s'", path);
 	}
 	else if (relative_base->len + length >= PATH_MAX) {
 		printwarn ("filename too long, ignoring");
 	}
 	else {
-		strcpy (buffer, relative_base->str);
-		strcpy (buffer + relative_base->len, path);
-		saved_file = pfs_file_create (buffer, 0);
-		if (saved_file == NULL) {
+		full_path = malloc (sizeof (*full_path) * (relative_base->len + length + 1));
+		if (!full_path) {
 			printerr ("memory allocation failed");
 			return NULL;
 		}
-		if (data->opts.verbose) fprintf (stderr, "\t%s -> %s\n", path, buffer);
+		strcpy (full_path, relative_base->str);
+		strcpy (full_path + relative_base->len, path);
+		printinfof("\t%s -> %s", path, full_path);
 	}
-	return saved_file;
+	return full_path;
 }
 
 /*
@@ -423,11 +428,8 @@ static gboolean pfs_parse_options (
 			printerr ("no target mount point");
 			return FALSE;
 		}
-		opts->mount_point = argv[--argc];
-	}
-
-	if (pfs_check_mount_point (opts->mount_point) == FALSE) {
-		return FALSE;
+		opts->mount_point = g_malloc (sizeof (*opts->mount_point) * strlen(argv[--argc]));
+		strcpy (opts->mount_point, argv[argc]);
 	}
 
 	opts->lists = malloc (sizeof (*opts->lists) * argc);
@@ -444,11 +446,13 @@ static gboolean pfs_parse_options (
 }
 
 static gboolean pfs_check_mount_point (
-	char* mount_point
+	pfs_data* data
 ) {
+	char* mount_point = data->opts.mount_point;
 	struct stat mountstat;
 	if (0 == stat (mount_point, &mountstat)) {
 		if (S_ISDIR (mountstat.st_mode)) {
+			printinfof ("Mounting to '%s'", mount_point);
 			return TRUE;
 		}
 		else {
@@ -465,6 +469,9 @@ static gboolean pfs_check_mount_point (
 /*
 ---- Arguments to FUSE ----
 */
+static gboolean pfs_setup_fuse_fsname (
+	char** fuse_fsname, pfs_data* data
+);
 
 static gboolean pfs_setup_fuse_arguments (
 	int* argc, char** argv[], char* pfs_name, pfs_data* data
@@ -482,10 +489,13 @@ static gboolean pfs_setup_fuse_arguments (
 	fuse_argv[fuse_argc++] = "-osubtype=playlistfs";
 
 	printinfo ("Passing options to FUSE:");
-	if (pfs_setup_fuse_fsname(fuse_argc++, fuse_argv, data) == FALSE) {
+	if (!pfs_setup_fuse_fsname(&fuse_argv[fuse_argc], data)) {
+		printerr ("memory allocation failed");
+		free (fuse_argv);
 		return FALSE;
 	}
-	printinfof ("\t%s (filesystem name)", fuse_argv[fuse_argc - 1]);
+	printinfof ("\t%s (filesystem name)", fuse_argv[fuse_argc]);
+	fuse_argc++;
 
 	if (data->opts.fuse.debug) {
 		fuse_argv[fuse_argc++] = "-d";
@@ -510,35 +520,31 @@ static gboolean pfs_setup_fuse_arguments (
 }
 
 static gboolean pfs_setup_fuse_fsname (
-	int fuse_argc, char* fuse_argv[], pfs_data* data
+	char** fuse_fsname, pfs_data* data
 ) {
+	char* name = NULL;
+	gboolean need_to_free = FALSE;
+
 	if (data->opts.fuse.fsname != NULL) {
-		fuse_argv[fuse_argc] = malloc (10 + strlen (data->opts.fuse.fsname));
-		if(!fuse_argv[fuse_argc]) {
-			printerr ("memory allocation failed");
-			free (fuse_argv);
-			return FALSE;
-		}
-		sprintf (fuse_argv[fuse_argc], "-ofsname=%s", data->opts.fuse.fsname);
+		name = data->opts.fuse.fsname;
 	}
 	else if (data->opts.lists[0]) {
-		char* name = strrchr (data->opts.lists[0], '/');
-		if (name == NULL) {
-			name = data->opts.lists[0];
-		}
-		else {
-			name++;
-		}
-		fuse_argv[fuse_argc] = malloc (10 + strlen (name));
-		if(!fuse_argv[fuse_argc]) {
-			printerr ("memory allocation failed");
-			free (fuse_argv);
+		name = pfs_basename (data->opts.lists[0]);
+		need_to_free = TRUE;
+	}
+
+	if (name != NULL) {
+		*fuse_fsname = malloc (sizeof (*fuse_fsname) * (10 + strlen (name)));
+		if(!*fuse_fsname) {
 			return FALSE;
 		}
-		sprintf (fuse_argv[fuse_argc], "-ofsname=%s", name);
+		sprintf (*fuse_fsname, "-ofsname=%s", name);
+		if (need_to_free) {
+			free (name);
+		}
 	}
 	else {
-		fuse_argv[fuse_argc] = "-ofsname=playlistfs";
+		*fuse_fsname = "-ofsname=playlistfs";
 	}
 	return TRUE;
 }

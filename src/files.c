@@ -17,17 +17,18 @@
  */
 
 #include "playlistfs.h"
+#include <sys/stat.h>
 
 /*
 Create a new pfs_file.
-@parameter path: The path of the file
+@parameter full_path: The path of the file
 @parameter mode: The mode of the file
 */
-pfs_file* pfs_file_create (char* path, __mode_t mode) {
-	pfs_file* file = malloc (sizeof(*file));
+pfs_file* pfs_file_create (char* full_path, __mode_t mode) {
+	pfs_file* file = malloc (sizeof (*file));
 	if (!file)
 		return NULL;
-	file->path = g_string_new(path);
+	file->path = g_string_new(full_path);
 	if (!file->path) {
 		free (file);
 		return NULL;

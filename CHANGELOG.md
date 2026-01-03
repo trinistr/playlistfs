@@ -22,6 +22,7 @@ Note that versions before 0.3.0 were bumped at pretty much random points in time
 - In verbose display, lists names now display fully (previously, it was just dirname).
 - In verbose display, relative paths in lists now display both relative and absolute paths.
 - Probably some undiscovered bugs related to handling current directory and relative paths.
+- Memory leaks during start-up.
 
 [Compare v0.2.2...main](https://github.com/trinistr/playlistfs/compare/v0.2.2...main)
 

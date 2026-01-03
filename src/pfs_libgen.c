@@ -47,7 +47,7 @@ char* pfs_dirname (const char* path) {
     ptrdiff_t pos = last_slash_pos (path);
     char* name;
     if (pos > 0) {
-        name = malloc (pos + 1);
+        name = malloc (sizeof (*name) * (pos + 1));
         if (name == NULL) {
             return NULL;
         }
