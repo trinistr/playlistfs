@@ -8,13 +8,17 @@ Note that versions before 0.3.0 were bumped at pretty much random points in time
 
 ## [Next]
 
+[Compare v0.3.1...main](https://github.com/trinistr/playlistfs/compare/v0.3.1...main)
+
+## [v0.3.1]
+
 **Added**
 - SANITIZE=1 flag to `make` to enable ASan. `SANITIZE=1 make test` will also add ASAN_OPTIONS to enable even more diagnostics.
 
 **Fixed**
 - Buffer overflow in start-up code.
 
-[Compare v0.3.0...main](https://github.com/trinistr/playlistfs/compare/v0.3.0...main)
+[Compare v0.3.0...main](https://github.com/trinistr/playlistfs/compare/v0.3.0...v0.3.1)
 
 ## [v0.3.0]
 
@@ -84,6 +88,7 @@ This version was known as 0.9.0 at the time, so it reports that.
 - Several options passed to FUSE.
 
 [Next]: https://github.com/trinistr/playlistfs/tree/main
+[v0.3.1]: https://github.com/trinistr/playlistfs/tree/v0.3.1
 [v0.3.0]: https://github.com/trinistr/playlistfs/tree/v0.3.0
 [v0.2.2]: https://github.com/trinistr/playlistfs/tree/v0.2.2
 [v0.2.1]: https://github.com/trinistr/playlistfs/tree/v0.2.1
