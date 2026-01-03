@@ -8,7 +8,55 @@ on:
 permissions: {}
 
 jobs:
-  build:
+  build3:
+    name: Build for FUSE 3
+    if: ${{ github.repository_owner == 'trinistr' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libfuse3-dev libglib2.0-dev
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - name: Compile playlistfs
+        run: |
+          make
+      - name: Upload binary
+        uses: actions/upload-artifact@v6
+        with:
+          name: playlistfs-binary-fuse3-${{ github.sha }}
+          path: dist/bin/playlistfs
+          if-no-files-found: error
+          retention-days: 1
+  test3:
+    name: Test with FUSE 3
+    runs-on: ubuntu-latest
+    needs: build3
+    steps:
+      - name: Install runtime dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libfuse3-3 libglib2.0-0t64
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - name: Download binary
+        uses: actions/download-artifact@v7
+        with:
+          name: playlistfs-binary-fuse3-${{ github.sha }}
+          path: dist/bin/
+      - name: Enable execution for binary
+        run: |
+          chmod +x dist/bin/playlistfs
+      - name: Run tests
+        run: |
+          make test-current
+  build2:
+    name: Build for FUSE 2
     if: ${{ github.repository_owner == 'trinistr' }}
     runs-on: ubuntu-latest
     steps:
@@ -22,17 +70,18 @@ jobs:
           persist-credentials: false
       - name: Compile playlistfs
         run: |
-          make
+          FUSE=2 make
       - name: Upload binary
         uses: actions/upload-artifact@v6
         with:
-          name: playlistfs-binary-${{ github.sha }}
+          name: playlistfs-binary-fuse2-${{ github.sha }}
           path: dist/bin/playlistfs
           if-no-files-found: error
           retention-days: 1
-  test:
+  test2:
+    name: Test with FUSE 2
     runs-on: ubuntu-latest
-    needs: build
+    needs: build2
     steps:
       - name: Install runtime dependencies
         run: |
@@ -45,7 +94,7 @@ jobs:
       - name: Download binary
         uses: actions/download-artifact@v7
         with:
-          name: playlistfs-binary-${{ github.sha }}
+          name: playlistfs-binary-fuse2-${{ github.sha }}
           path: dist/bin/
       - name: Enable execution for binary
         run: |
