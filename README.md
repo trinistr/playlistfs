@@ -20,7 +20,7 @@ Some examples of what PlaylistFS can be used for:
 ## Compiling
 
 PlaylistFS has following library dependencies:
-- libfuse2
+- libfuse3 (or libfuse2)
 - glib2
 
 On systems with separate development packages those need to be installed as
@@ -29,21 +29,27 @@ well. Of course, basic development environment is also needed:
 
 > [!WARNING]
 > Ubuntu has fuse2 packages incompatible with important GUI (and other) packages.
-> Installing them will probably break your system.
-> Currently, I recommend *not* using this software on Ubuntu and Ubuntu-derived distros.
-> In the future, PlaylistFS will work with fuse3, removing this problem.
+> Installing them [may break your system](https://askubuntu.com/a/1409500).
+> Please use fuse3.
 
 Ubuntu and Ubuntu-based distros (like Linux Mint):
 ```sh
-apt install libfuse-dev libglib2.0-dev
+apt install libfuse3-dev libglib2.0-dev
 ```
 
 Archlinux and Archlinux-based distros (like Manjaro):
 ```sh
-pacman -S fuse2 glib2
+pacman -S fuse3 glib2
 ```
 
-To compile `playlistfs`, it is enough to run `make` (or `make bin`).
+To compile `playlistfs`, it is enough to run `make` (or `make bin`):
+```sh
+make # Compile with libfuse3
+FUSE=2 make # Compile with libfuse2
+# If something is messed up, remaking may help:
+make remake
+```
+
 If you want to also generate a very simple man page, run `make man`
 (this requires `help2man` and `gzip`).
 
@@ -83,7 +89,10 @@ PREFIX=/usr make install-all
 If you have a compiled binary, and your system has separate development packages,
 those aren't needed to just run `playlistfs`.
 
-For example, on Ubuntu it is enough to install `libfuse2t64` and `libglib2.0-0t64`.
+For example, on Ubuntu it is enough to install `libfuse3-3` and `libglib2.0-0t64`.
+
+> [!NOTE]
+> Check all options with `playlistfs --help-all`. Options that are passed along to FUSE are not shown with plain `--help`.
 
 ### Playlist files
 
@@ -110,9 +119,6 @@ This playlist contains one absolute path (`/etc/default/keyboard`), other paths
 are relative. Note that `documents/file1` shadows the earlier `file1`.
 
 ### Mounting on command line
-
-> [!NOTE]
-> Check all options with `playlistfs --help-all`. Options that are passed along to FUSE are not shown with plain `--help`.
 
 When using command line, it is possible to specify files to mount in several
 ways. The user can specify several playlists and individual files to include
