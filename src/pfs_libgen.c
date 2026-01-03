@@ -24,19 +24,26 @@
 #include <stdlib.h>
 
 /*
+From dirname(3):
+    path       dirname   basename
+    /usr/lib   /usr      lib
+    /usr/      /         usr
+    usr        .         usr
+    /          /         /
+    .          .         .
+    ..         .         ..
+*/
+
+/*
 Return position of last '/' inside path or -1 if not found.
 */
-inline static ptrdiff_t last_slash_pos (const char* path) {
-    char* pos = strrchr (path, '/');
-    if (pos != NULL) {
-        return pos - path;
-    }
-    else {
-        return -1;
-    }
-}
+inline static ptrdiff_t last_slash_pos (const char* path);
 
 char* pfs_dirname (const char* path) {
+    if (path == NULL) {
+        return NULL;
+    }
+
     ptrdiff_t pos = last_slash_pos (path);
     char* name;
     if (pos > 0) {
@@ -57,6 +64,10 @@ char* pfs_dirname (const char* path) {
 }
 
 char* pfs_basename (const char* path) {
+    if (path == NULL) {
+        return NULL;
+    }
+
     ptrdiff_t pos = last_slash_pos (path);
     char* name;
     if (pos >= 0) {
@@ -71,4 +82,14 @@ char* pfs_basename (const char* path) {
         name = strdup (path);
     }
     return name;
+}
+
+inline static ptrdiff_t last_slash_pos (const char* path) {
+    char* pos = strrchr (path, '/');
+    if (pos != NULL) {
+        return pos - path;
+    }
+    else {
+        return -1;
+    }
 }

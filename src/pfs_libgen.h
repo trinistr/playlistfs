@@ -21,18 +21,24 @@
 
 /*
 Return part of path up to, but not including, the last "/".
-If path does not include "/", return "."
+
+If path is NULL, return NULL.
+If path does not contain "/" (including "." and ".."), return ".".
 If path is "/" or directly under it, return "/".
-Returned string must be freed by the caller.
+Returned string must be free()'d by the caller.
+
 @parameter path: a Unix file path
 */
 char* pfs_dirname (const char* path);
 
 /*
 Return part of path after the last "/".
-If path does not include "/", return a copy of path.
+
+If path is NULL, return NULL.
+If path does not contain "/" (including "." and ".."), return a copy of path.
 If path ends on a "/", return an empty string.
-Returned string must be freed by the caller.
+Returned string must be free()'d by the caller.
+
 @parameter path: a Unix file path
 */
 char* pfs_basename (const char* path);

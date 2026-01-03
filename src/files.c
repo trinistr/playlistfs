@@ -47,7 +47,7 @@ void pfs_file_free (pfs_file* file) {
 }
 
 /*
-Same as pfs_file_free, but for use with g_hash_table_foreach.
+Same as pfs_file_free, but for use with GHashTable.
 @parameter file: The pfs_file to free
 */
 void pfs_file_free_void (void* file) {

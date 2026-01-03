@@ -168,12 +168,18 @@ static gboolean pfs_build_playlist (
 					char* name = pfs_basename (path);
 					if (!name) {
 						printerr ("memory allocation failed");
-						if (saved_file)
+						if (saved_file) {
 							pfs_file_free (saved_file);
-						if (relative_base)
+							saved_file = NULL;
+						}
+						if (relative_base) {
 							g_string_free (relative_base, TRUE);
-						if (cwd)
+							relative_base = NULL;
+						}
+						if (cwd) {
 							g_string_free (cwd, TRUE);
+							cwd = NULL;
+						}
 						return FALSE;
 					}
 					saved_file->type = filestat.st_mode&S_IFMT;
@@ -189,9 +195,12 @@ static gboolean pfs_build_playlist (
 			else {
 				printwarnf ("error when reading list '%s'", lists[ilist]);
 			}
-			if (relative_base)
-				g_string_free(relative_base, TRUE);
-			free(listpath);
+			if (relative_base) {
+				g_string_free (relative_base, TRUE);
+				relative_base = NULL;
+			}
+			free (listpath);
+			listpath = NULL;
 		}
 	}
 
@@ -203,20 +212,26 @@ static gboolean pfs_build_playlist (
 
 			if (0 != stat (saved_file->path->str, &filestat)) {
 				printwarnf ("file '%s' is inaccessible, ignoring", files[ifile]);
-				pfs_file_free(saved_file);
+				pfs_file_free (saved_file);
+				saved_file = NULL;
 			}
 			else if (S_ISDIR (filestat.st_mode)) {
 				printwarnf ("file '%s' is a directory, ignoring", files[ifile]);
-				pfs_file_free(saved_file);
+				pfs_file_free (saved_file);
+				saved_file = NULL;
 			}
 			else {
 				char* name = pfs_basename (files[ifile]);
 				if (!name) {
 					printerr ("memory allocation failed");
-					if (saved_file)
+					if (saved_file) {
 						pfs_file_free (saved_file);
-					if (cwd)
+						saved_file = NULL;
+					}
+					if (cwd) {
 						g_string_free (cwd, TRUE);
+						cwd = NULL;
+					}
 					return FALSE;
 				}
 				saved_file->type = filestat.st_mode&S_IFMT;
@@ -230,8 +245,10 @@ static gboolean pfs_build_playlist (
 		printwarn("no lists or files specified, mounting empty filesystem");
 	}
 
-	if (cwd)
-		g_string_free(cwd, TRUE);
+	if (cwd){
+		g_string_free (cwd, TRUE);
+		cwd = NULL;
+	}
 
 	return TRUE;
 }
@@ -382,6 +399,7 @@ static gboolean pfs_parse_options (
 		return FALSE;
 	}
 	g_option_context_free (optionContext);
+	optionContext = NULL;
 
 	if (opts->show_version) {
 		puts (
