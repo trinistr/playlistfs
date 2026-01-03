@@ -19,7 +19,10 @@
 #ifndef PLAYLISTFS_H
 #define PLAYLISTFS_H
 
-#define FUSE_USE_VERSION 26
+#ifndef FUSE_USE_VERSION
+#define FUSE_USE_VERSION 35
+#endif
+
 #define _XOPEN_SOURCE 700 // Several functions, including pread and pwrite
 #define _GNU_SOURCE // GNU fallocate()
 #define _FILE_OFFSET_BITS 64 // FUSE requires 64-bit off_t

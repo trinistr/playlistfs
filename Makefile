@@ -25,12 +25,24 @@ MAN_NAME    := playlist as a file system
 MAN_SECTION := 1
 
 #Flags, Libraries and Includes
-DEBUG ?= 0
-SANITIZER ?= 0
+FUSE ?= 3 # Set to 2 to use FUSE 2
+DEBUG ?= 0 # Set to 1 to deoptimize and enable gdb support
+SANITIZER ?= 0 # Set to 1 to enable ASan and extra diagnostics in tests
 
-CFLAGS += -Wall -O3 --std=c11 $(shell pkg-config fuse --cflags) $(shell pkg-config glib-2.0 --cflags)
-LDFLAGS += $(shell pkg-config fuse --libs) $(shell pkg-config glib-2.0 --libs)
+CFLAGS += -Wall -O3 --std=c11 $(shell pkg-config glib-2.0 --cflags)
+LDFLAGS += $(shell pkg-config glib-2.0 --libs)
 RUNFLAGS +=
+
+ifeq ($(FUSE), 2)
+	FUSE_VERSION ?= 29
+    CFLAGS += -DFUSE_USE_VERSION=$(FUSE_VERSION) $(shell pkg-config fuse --cflags)
+	LDFLAGS += $(shell pkg-config fuse --libs)
+else
+	FUSE_VERSION ?= 35
+    CFLAGS += -DFUSE_USE_VERSION=$(FUSE_VERSION) $(shell pkg-config fuse3 --cflags)
+	LDFLAGS += $(shell pkg-config fuse3 --libs)
+endif
+
 ifeq ($(DEBUG), 1)
     CFLAGS += -ggdb -O0
 endif

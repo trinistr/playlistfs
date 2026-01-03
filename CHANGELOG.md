@@ -8,12 +8,21 @@ Note that versions before 0.3.0 were bumped at pretty much random points in time
 
 ## [Next]
 
+**Added**
+- Support for FUSE 3.
+- FUSE and FUSE_VERSION flags for `make`.
+  - FUSE=3 is default, can be set to FUSE=2 to compile against libfuse2.
+  - FUSE_VERSION can set desired FUSE_USE_VERSION to use newer features of libfuse. By default it is either 35 or 29, depending on FUSE flag.
+
+**Changed**
+- Some flags passed to fuse were removed for compatibility, so behavior may be slightly different with unlinked files.
+
 [Compare v0.3.1...main](https://github.com/trinistr/playlistfs/compare/v0.3.1...main)
 
 ## [v0.3.1]
 
 **Added**
-- SANITIZE=1 flag to `make` to enable ASan. `SANITIZE=1 make test` will also add ASAN_OPTIONS to enable even more diagnostics.
+- SANITIZER=1 flag to `make` to enable ASan. `SANITIZE=1 make test` will also add ASAN_OPTIONS to enable even more diagnostics.
 
 **Fixed**
 - Buffer overflow in start-up code.
