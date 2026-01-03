@@ -6,7 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 Note that versions before 0.3.0 were bumped at pretty much random points in time, while this changelog was written 5 years later, with tags set at reasonable points.
 
+## [Next]
+
 ## [v0.3.0]
+
+This update is focused on rewriting internals to make the code more maintainable and less error-prone. Nonetheless, there are a couple of new features and bugfixes.
 
 **Added**
 - An autotest system to ensure at least some quality.
@@ -24,7 +28,7 @@ Note that versions before 0.3.0 were bumped at pretty much random points in time
 - Probably some undiscovered bugs related to handling current directory and relative paths.
 - Memory leaks during start-up.
 
-[Compare v0.2.2...main](https://github.com/trinistr/playlistfs/compare/v0.2.2...main)
+[Compare v0.2.2...v0.3.0](https://github.com/trinistr/playlistfs/compare/v0.2.2...v0.3.0)
 
 ## [v0.2.2] — 2020-09-28
 
@@ -72,6 +76,7 @@ This version was known as 0.9.0 at the time, so it reports that.
 - Several options passed to FUSE.
 
 [Next]: https://github.com/trinistr/playlistfs/tree/main
+[v0.3.0]: https://github.com/trinistr/playlistfs/tree/v0.3.0
 [v0.2.2]: https://github.com/trinistr/playlistfs/tree/v0.2.2
 [v0.2.1]: https://github.com/trinistr/playlistfs/tree/v0.2.1
 [v0.2.0]: https://github.com/trinistr/playlistfs/tree/v0.2.0
