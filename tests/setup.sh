@@ -136,11 +136,11 @@ extract_file_info() {
 # Compare file metadata between two files to check if they are equivalent (as status code).
 # Does not check file contents.
 compare_file_info() {
-    local info_1=extract_file_info "$1"
-    local info_2=extract_file_info "$2"
-    echo "$info_1"
-    echo "$info_2"
-    test "q$info_1" = "q$info_2"
+    local info_a="$(extract_file_info "$1")"
+    local info_b="$(extract_file_info "$2")"
+    echo "'$info_a'"
+    echo "'$info_b'"
+    test "q$info_a" = "q$info_b"
 }
 
 # Get file's mode (permissions) (printed to stdout).
