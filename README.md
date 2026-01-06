@@ -138,7 +138,7 @@ This will mount a directory at `~/mount_point` with following files:
 - program → ../bin/program
 
 By default, files are presented as regular files to make copying in file
-managers easier. Supplying `--symlink`/`-s` options changes them to symlinks.
+managers easier. Supplying `--symlinks`/`-s` options changes them to symlinks.
 
 Unmounting can be done with `fusermount` program, which is provided by FUSE, or `umount`:
 ```sh

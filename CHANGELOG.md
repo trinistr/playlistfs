@@ -18,9 +18,15 @@ Note that versions before 0.3.0 were bumped at pretty much random points in time
 
 **Changed**
 - `--version`/`-V` now outputs build date and libfuse's version the binary was built against.
+- Changed some option names:
+  - Short form of `--no-relative` option was changed to `-N` (from `-n`).
+  - `--symlink` is renamed to `--symlinks`.
+  - `--(no-)relative-lists` is renamed to `--(no-)relative-paths`. An option to disable relative paths for lists themselves may be added in the future.
+- `--relative*` options are now visible in help output.
 
 **Fixed**
 - Non-executable files are no longer installed with execution permissions.
+- `--no-relative*` options can be overridden by later `--relative*` options and vice versa.
 
 [Compare v0.3.1...main](https://github.com/trinistr/playlistfs/compare/v0.3.1...main)
 

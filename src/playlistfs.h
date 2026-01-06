@@ -48,11 +48,11 @@ typedef struct {
 	char** files;
 	char** lists;
 	char* mount_point;
-	gboolean symlink;
+	gboolean symlinks;
 	struct {
 		gboolean all;
 		gboolean files;
-		gboolean lists;
+		gboolean paths;
 	} relative_disabled;
 	gboolean verbose;
 	gboolean show_version;

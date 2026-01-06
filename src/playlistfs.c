@@ -209,7 +209,7 @@ static gboolean pfs_build_playlist_process_list (
 
 	GString* relative_base = NULL;
 	
-	if (!data->opts.relative_disabled.lists) {
+	if (!data->opts.relative_disabled.paths) {
 		char* dirpath = NULL;
 		dirpath = pfs_dirname(listpath);
 		if (dirpath == NULL) {
@@ -352,6 +352,13 @@ static char* pfs_build_playlist_get_full_path_from_relative (
 ---- Option parsing ----
 */
 
+static gboolean pfs_no_relative_option_callback (
+	const char* option_name, const char* value, gpointer data, GError** error
+);
+static gboolean pfs_relative_option_callback (
+	const char* option_name, const char* value, gpointer data, GError** error
+);
+
 static GOptionContext* pfs_setup_options (
 	pfs_options* opts
 ) {
@@ -366,25 +373,29 @@ static GOptionContext* pfs_setup_options (
 	);
 	g_option_context_set_help_enabled (optionContext, TRUE);
 
+	GOptionGroup* mainGroup = g_option_group_new (
+		NULL, NULL, NULL, opts, NULL
+	);
 	GOptionEntry options[] = {
 		{ "target", 't', G_OPTION_FLAG_NONE, G_OPTION_ARG_FILENAME, &opts->mount_point, "Set mount point explicitly", "MOUNT_DIR"},
 		{ "file", 'f', G_OPTION_FLAG_NONE, G_OPTION_ARG_FILENAME_ARRAY, &opts->files, "Add a single file, overriding any lists", "FILE"},
-		{ "no-relative", 'n', G_OPTION_FLAG_NONE, G_OPTION_ARG_NONE, &opts->relative_disabled.all, "Disable relative path handling", NULL},
-		{ "relative", 0, G_OPTION_FLAG_HIDDEN|G_OPTION_FLAG_REVERSE, G_OPTION_ARG_NONE, &opts->relative_disabled.all, NULL, NULL},
-		{ "no-relative-files", 0, G_OPTION_FLAG_NONE, G_OPTION_ARG_NONE, &opts->relative_disabled.files, "Disable relative path handling for files added with -f", NULL},
-		{ "relatve-files", 0, G_OPTION_FLAG_HIDDEN|G_OPTION_FLAG_REVERSE, G_OPTION_ARG_NONE, &opts->relative_disabled.files, NULL, NULL},
-		{ "no-relative-lists", 0, G_OPTION_FLAG_NONE, G_OPTION_ARG_NONE, &opts->relative_disabled.lists, "Disable relative path handling in LISTs", NULL},
-		{ "relatve-lists", 0, G_OPTION_FLAG_HIDDEN|G_OPTION_FLAG_REVERSE, G_OPTION_ARG_NONE, &opts->relative_disabled.lists, NULL, NULL},
-		{ "symlink", 's', G_OPTION_FLAG_NONE, G_OPTION_ARG_NONE, &opts->symlink, "Show symlinks instead of regular files", NULL},
+		{ "symlinks", 's', G_OPTION_FLAG_NONE, G_OPTION_ARG_NONE, &opts->symlinks, "Show symlinks instead of regular files", NULL},
+		{ "no-relative", 'N', G_OPTION_FLAG_NO_ARG, G_OPTION_ARG_CALLBACK, pfs_no_relative_option_callback, "Combine --no-relative-files and --no-relative-paths", NULL},
+		{ "relative", 0, G_OPTION_FLAG_NO_ARG, G_OPTION_ARG_CALLBACK, pfs_relative_option_callback, "Enable all relative path handling", NULL},
+		{ "no-relative-files", 0, G_OPTION_FLAG_NONE, G_OPTION_ARG_NONE, &opts->relative_disabled.files, "Disable relative path handling for files added with --file", NULL},
+		{ "relative-files", 0, G_OPTION_FLAG_REVERSE, G_OPTION_ARG_NONE, &opts->relative_disabled.files, "Reverse effect of --no-relative-files", NULL},
+		{ "no-relative-paths", 0, G_OPTION_FLAG_NONE, G_OPTION_ARG_NONE, &opts->relative_disabled.paths, "Disable relative path handling in LISTs", NULL},
+		{ "relative-paths", 0, G_OPTION_FLAG_REVERSE, G_OPTION_ARG_NONE, &opts->relative_disabled.paths, "Reverse effect of --no-relative-paths", NULL},
 		{ "verbose", 'v', G_OPTION_FLAG_NONE, G_OPTION_ARG_NONE, &opts->verbose, "Describe what is happening", NULL},
 		{ "quiet", 'q', G_OPTION_FLAG_NONE, G_OPTION_ARG_NONE, &opts->quiet, "Suppress warnings", NULL},
 		{ "version", 'V', G_OPTION_FLAG_NONE, G_OPTION_ARG_NONE, &opts->show_version, "Display version information", NULL},
 		{}
 	};
-	g_option_context_add_main_entries (optionContext, options, NULL);
+	g_option_group_add_entries (mainGroup, options);
+	g_option_context_set_main_group (optionContext, mainGroup);
 
 	GOptionGroup* optionsFuseGroup = g_option_group_new (
-		"fuse", "Options passed to FUSE:", "FUSE options", NULL, NULL
+		"fuse", "Options passed to FUSE:", "Show FUSE options", NULL, NULL
 	);
 	GOptionEntry optionsFuse[] = {
 		{ "read-only", 'r', G_OPTION_FLAG_NONE, G_OPTION_ARG_NONE, &opts->fuse.ro, "Mount file system as read-only", NULL},
@@ -429,9 +440,11 @@ static gboolean pfs_parse_options (
 		}
 	}
 
-	if (opts->relative_disabled.all) {
-		opts->relative_disabled.files = TRUE;
-		opts->relative_disabled.lists = TRUE;
+	if (!opts->relative_disabled.files || !opts->relative_disabled.paths) {
+		opts->relative_disabled.all = FALSE;
+	}
+	else {
+		opts->relative_disabled.all = TRUE;
 	}
 
 	if (opts->mount_point == NULL) {
@@ -452,6 +465,32 @@ static gboolean pfs_parse_options (
 		opts->lists[i - 1] = argv[i];
 	}
 	opts->lists[argc - 1] = NULL;
+
+	return TRUE;
+}
+
+static gboolean pfs_no_relative_option_callback (
+	const char* option_name, const char* value, gpointer data, GError** error
+) {
+	*error = NULL;
+
+	pfs_options* opts = (pfs_options*) data;
+	opts->relative_disabled.all = TRUE;
+	opts->relative_disabled.files = TRUE;
+	opts->relative_disabled.paths = TRUE;
+
+	return TRUE;
+}
+
+static gboolean pfs_relative_option_callback (
+	const char* option_name, const char* value, gpointer data, GError** error
+) {
+	*error = NULL;
+
+	pfs_options* opts = (pfs_options*) data;
+	opts->relative_disabled.all = FALSE;
+	opts->relative_disabled.files = FALSE;
+	opts->relative_disabled.paths = FALSE;
 
 	return TRUE;
 }

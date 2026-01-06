@@ -1,10 +1,8 @@
 - (?) use lstat instead of stat for original files when building table
 - handle dereferencing or not of symlinks
 - (?) actually implement atime touching (though shouldn't it just work?)
-- rename --symlink to --symlinks
 - --unmount/-u option (use fusermount -u / umount)
 - (?) redo --no-relative-* as positive options and flags
-- Fix --no-relative overwriting --relative-* options
 - (?) add option to mount over non-empty directory (will always work in FUSE 3 anyway)
 - Fix memory leaks in operations
 - Add optional failures when something can't be accessed instead of skipping
@@ -14,3 +12,4 @@
 - Don't rename file to itself, see rename(2)
 - Don't use default_permissions, as it prohibits things like link(2) on files not owned by user
 - (?) Remove "playlist" from auto-generated directory name
+- (?) Add an option --no-relative-lists to disable relative paths to lists themselves

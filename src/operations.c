@@ -172,7 +172,7 @@ static int pfs_getattr (const char* path, struct stat* statbuf, struct fuse_file
 	pfs_file* file = g_hash_table_lookup (data->filetable, path + 1);
 	if (!file)
 		return -ENOENT;
-	if (!data->opts.symlink && !S_ISLNK(file->type)) {
+	if (!data->opts.symlinks && !S_ISLNK(file->type)) {
 		if (lstat (file->path->str, statbuf) < 0)
 			return -errno;
 		if (data->opts.fuse.ro)
