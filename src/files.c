@@ -16,8 +16,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "playlistfs.h"
-#include <sys/stat.h>
+#define _GNU_SOURCE // S_IFMT and co without underscores
+
+#include "files.h"
+
+#include <stdlib.h>
 
 /*
 Create a new pfs_file.
@@ -28,7 +31,7 @@ pfs_file* pfs_file_create (char* full_path, __mode_t mode) {
 	pfs_file* file = malloc (sizeof (*file));
 	if (!file)
 		return NULL;
-	file->path = g_string_new(full_path);
+	file->path = g_string_new (full_path);
 	if (!file->path) {
 		free (file);
 		return NULL;

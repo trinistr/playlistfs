@@ -19,6 +19,7 @@
 #include "pfs_libgen.h"
 
 #define _XOPEN_SOURCE 700 // strdup()
+
 #include <string.h>
 #include <stddef.h>
 #include <stdlib.h>

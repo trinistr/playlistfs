@@ -42,16 +42,6 @@
 
 #ifndef PLAYLISTFS_VERSION
 #define PLAYLISTFS_VERSION "0.3.1"
-
-#define STRINGIFY(x) STRINGIFY_X(x)
-#define STRINGIFY_X(x) #x
-#ifndef BUILD_DATE
-#define BUILD_DATE __DATE__
-#endif
-#ifndef FUSE_LIB_VERSION
-#define FUSE_LIB_VERSION STRINGIFY(FUSE_USE_VERSION)
-#endif
-#define PLAYLISTFS_METADATA " (built " BUILD_DATE " with libfuse " FUSE_LIB_VERSION ")"
 #endif // PLAYLISTFS_VERSION
 
 typedef struct {
@@ -82,15 +72,5 @@ typedef struct {
 } pfs_data;
 
 void pfs_free_pfs_data (pfs_data* data);
-
-typedef struct {
-	GString* path;
-	__mode_t type;
-	char nlinks;
-} pfs_file;
-
-pfs_file* pfs_file_create (char* path, __mode_t mode);
-void pfs_file_free (pfs_file*);
-void pfs_file_free_void (void*);
 
 #endif // PLAYLISTFS_H

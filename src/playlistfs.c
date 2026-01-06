@@ -18,11 +18,22 @@
 
 #include "playlistfs.h"
 #include "pfs_libgen.h"
+#include "files.h"
 
 #ifndef PATH_MAX
 // For now, this will be a hard limit in case it is not defined.
 #define PATH_MAX 4096
 #endif
+
+#define STRINGIFY(x) STRINGIFY_X(x)
+#define STRINGIFY_X(x) #x
+#ifndef BUILD_DATE
+#define BUILD_DATE __DATE__
+#endif // BUILD_DATE
+#ifndef FUSE_LIB_VERSION
+#define FUSE_LIB_VERSION STRINGIFY(FUSE_USE_VERSION)
+#endif // FUSE_LIB_VERSION
+#define PLAYLISTFS_METADATA " (built " BUILD_DATE " with libfuse " FUSE_LIB_VERSION ")"
 
 // Defined in operations.c.
 extern struct fuse_operations pfs_operations;

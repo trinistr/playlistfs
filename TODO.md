@@ -10,3 +10,7 @@
 - Add optional failures when something can't be accessed instead of skipping
 - (?) s/PATH_MAX/NAME_MAX + 1/
 - Impose (large) limits on paths to prevent runaway allocation
+- Use our own inode numbers (and track them)
+- Don't rename file to itself, see rename(2)
+- Don't use default_permissions, as it prohibits things like link(2) on files not owned by user
+- (?) Remove "playlist" from auto-generated directory name

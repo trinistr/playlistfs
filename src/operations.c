@@ -17,19 +17,20 @@
  */
 
 #include "playlistfs.h"
-#include <sys/stat.h>
+#include "files.h"
 
-#if FUSE_USE_VERSION >= 30
-static void* pfs_init (struct fuse_conn_info *conn, struct fuse_config *cfg);
-#else
-static void* pfs_init (struct fuse_conn_info *conn);
-#endif
+// #if FUSE_USE_VERSION >= 30
+// static void* pfs_init (struct fuse_conn_info *conn, struct fuse_config *cfg);
+// #else
+// static void* pfs_init (struct fuse_conn_info *conn);
+// #endif // pfs_init
 static void pfs_destroy (void *);
+static int pfs_statfs (const char *, struct statvfs *);
 #if FUSE_USE_VERSION >= 30
 static int pfs_getattr (const char *, struct stat *, struct fuse_file_info *);
 #else
 static int pfs_getattr (const char *, struct stat *);
-#endif
+#endif // pfs_getattr
 static int pfs_readlink (const char *, char *, size_t);
 static int pfs_unlink (const char *);
 static int pfs_symlink (const char* path, const char* link);
@@ -37,17 +38,16 @@ static int pfs_symlink (const char* path, const char* link);
 static int pfs_rename (const char *, const char *, unsigned int flags);
 #else
 static int pfs_rename (const char *, const char *);
-#endif
+#endif // pfs_rename
 static int pfs_link (const char *, const char *);
 #if FUSE_USE_VERSION >= 30
 static int pfs_truncate (const char *, off_t, struct fuse_file_info *);
 #else
 static int pfs_truncate (const char *, off_t);
-#endif
+#endif // pfs_truncate
 static int pfs_open (const char *, struct fuse_file_info *);
 static int pfs_read (const char *, char *, size_t, off_t, struct fuse_file_info *);
 static int pfs_write (const char *, const char *, size_t, off_t, struct fuse_file_info *);
-static int pfs_statfs (const char *, struct statvfs *);
 static int pfs_release (const char *, struct fuse_file_info *);
 static int pfs_fsync (const char *, int, struct fuse_file_info *);
 static int pfs_opendir (const char *, struct fuse_file_info *);
@@ -55,20 +55,21 @@ static int pfs_opendir (const char *, struct fuse_file_info *);
 static int pfs_readdir (const char *, void *, fuse_fill_dir_t, off_t, struct fuse_file_info *, enum fuse_readdir_flags);
 #else
 static int pfs_readdir (const char *, void *, fuse_fill_dir_t, off_t, struct fuse_file_info *);
-#endif
+#endif // pfs_readdir
 static int pfs_releasedir (const char *, struct fuse_file_info *);
 static int pfs_access (const char *, int);
-#if FUSE_USE_VERSION < 30
+// Reused even if FUSE_USE_VERSION >= 30
 static int pfs_ftruncate (const char *, off_t, struct fuse_file_info *);
 static int pfs_fgetattr (const char *, struct stat *, struct fuse_file_info *);
-#endif
 #if FUSE_USE_VERSION >= 30
 static int pfs_utimens (const char *, const struct timespec tv[2], struct fuse_file_info *);
 #else
 static int pfs_utimens (const char *, const struct timespec tv[2]);
-#endif
+#endif // pfs_utimens
 static int pfs_fallocate (const char *, int, off_t, off_t, struct fuse_file_info *);
-
+#if FUSE_USE_VERSION >= 30
+static off_t pfs_lseek (const char *, off_t, int, struct fuse_file_info *);
+#endif // pfs_lseek
 /*
 This struct is exported to playlistfs.c.
 
@@ -76,8 +77,9 @@ Allowed operations. Unused ones are commented out,
 deprecated are not listed at all.
 */
 struct fuse_operations pfs_operations = {
-	.init = pfs_init, // These two are not necessarily useful
+	// .init = pfs_init, // These two are not necessarily useful
 	.destroy = pfs_destroy,
+	.statfs = pfs_statfs, // = statvfs
 	.getattr = pfs_getattr,
 	.readlink = pfs_readlink,// For symlink mode and symlinks in general
 	//.mknod = pfs_mknod, // No file creation. Regular files should use .create anyway
@@ -89,11 +91,10 @@ struct fuse_operations pfs_operations = {
 	.link = pfs_link,
 	//.chmod = pfs_chmod, // Maybe these two should not actually be allowed?
 	//.chown = pfs_chown,
-	.truncate = pfs_truncate, // Questionable
+	.truncate = pfs_truncate,
 	.open = pfs_open,
 	.read = pfs_read,
 	.write = pfs_write,
-	.statfs = pfs_statfs, // = statvfs
 	//.flush = pfs_flush,
 	.release = pfs_release, // Files need to be closed
 	.fsync = pfs_fsync,
@@ -101,15 +102,15 @@ struct fuse_operations pfs_operations = {
 	//.getxattr = pfs_getxattr,
 	//.listxattr = pfs_listxattr,
 	//.removexattr = pfs_removexattr,
-	.opendir = pfs_opendir, // Need to actually check if this gets called on root
+	.opendir = pfs_opendir,
 	.readdir = pfs_readdir,
 	.releasedir = pfs_releasedir, // Directories also need to be closed, or do they?
 	//.fsyncdir = pfs_fsyncdir, //Can be called on root, probably
 	.access = pfs_access, // default_permissions negates the need for this
 	//.create = pfs_create, // No file creation
 	#if FUSE_USE_VERSION < 30
-	.ftruncate = pfs_ftruncate, // Seems that this one can just call truncate
-	.fgetattr = pfs_fgetattr, // The same
+	.ftruncate = pfs_ftruncate,
+	.fgetattr = pfs_fgetattr,
 	#endif
 	//.lock = pfs_lock, // Implemented by kernel (not needed for local FS)
 	.utimens = pfs_utimens, // Use utimensat
@@ -122,41 +123,48 @@ struct fuse_operations pfs_operations = {
 	.fallocate = pfs_fallocate,
 	#if FUSE_USE_VERSION >= 30
 	// .copy_file_range = pfs_copy_file_range,
-	// .lseek = pfs_lseek,
+	.lseek = pfs_lseek,
+	#endif
+	#if FUSE_USE_VERSION < 30
+	.flag_nullpath_ok = 0,
+	.flag_nopath = 0,
+	.flag_utime_omit_ok = 1,
 	#endif
 };
 
-#if FUSE_USE_VERSION < 30
-static void* pfs_init (struct fuse_conn_info *conn) {
-#else
-static void* pfs_init (struct fuse_conn_info *conn, struct fuse_config *cfg) {
-	// We control the configuration ourselves, don't need to check it.
-	(void) cfg;
-#endif
-	return fuse_get_context ()->private_data;
-}
+// #if FUSE_USE_VERSION < 30
+// static void* pfs_init (struct fuse_conn_info *conn) {
+// #else
+// static void* pfs_init (struct fuse_conn_info *conn, struct fuse_config *cfg) {
+// #endif
+// 	return fuse_get_context ()->private_data;
+// }
 
 static void pfs_destroy (void* private_data) {
 	pfs_free_pfs_data ((pfs_data*) private_data);
+}
+
+static int pfs_statfs (const char* path, struct statvfs* statbuf) {
+	pfs_data* data = fuse_get_context ()->private_data;
+	statbuf->f_files = g_hash_table_size (data->filetable);
+	statbuf->f_ffree = 0;
+	statbuf->f_namemax = NAME_MAX;
+	return 0;
 }
 
 #if FUSE_USE_VERSION < 30
 static int pfs_getattr (const char* path, struct stat* statbuf) {
 #else
 static int pfs_getattr (const char* path, struct stat* statbuf, struct fuse_file_info* fi) {
+	if (fi != NULL) {
+		return pfs_fgetattr (path, statbuf, fi);
+	}
 #endif
 	if (0 == strcmp (path, "/")) {
 		statbuf->st_mode = S_IFDIR | 0777;
 		statbuf->st_nlink = 2;
 		return 0;
 	}
-	#if FUSE_USE_VERSION >= 30
-	if (fi != NULL) {
-		if (fstat (fi->fh, statbuf) < 0)
-			return -errno;
-		return 0;
-	}
-	#endif
 
 	struct fuse_context* context = fuse_get_context ();
 	pfs_data* data = context->private_data;
@@ -200,17 +208,18 @@ static int pfs_unlink (const char* path) {
 		return -ENOENT;
 	g_hash_table_steal (data->filetable, key);
 	free (key);
-	file->nlinks--;
+	if (--file->nlinks == 0) {
+		pfs_file_free(file);
+	}
 	return 0;
 }
 
 static int pfs_symlink (const char* path, const char* link) {
 	pfs_data* data = fuse_get_context ()->private_data;
-	pfs_file* file = g_hash_table_lookup (data->filetable, link + 1);
-	if (file) {
+	if (g_hash_table_contains (data->filetable, link + 1)) {
 		return -EEXIST;
 	}
-	file = pfs_file_create (strdup(path), S_IFLNK|0777);
+	pfs_file* file = pfs_file_create (strdup(path), S_IFLNK|0777);
 	g_hash_table_insert (data->filetable, strdup(link + 1), file);
 	return 0;
 }
@@ -239,23 +248,26 @@ static int pfs_rename (const char* path, const char* newpath, unsigned int flags
 
 	if (!g_hash_table_lookup_extended (data->filetable, path + 1, (void**) &name1, (void**) &file1))
 		return -ENOENT;
+	// All variants need to check the target in some way.
+	g_hash_table_lookup_extended (data->filetable, newpath + 1, (void**) &name2, (void**) &file2);
 
 	switch (flags) {
 	case RENAME_EXCHANGE:
-		if (!g_hash_table_lookup_extended (data->filetable, newpath + 1, (void**) &name2, (void**) &file2))
+		if (file2 == NULL)
 			return -ENOENT;
-		g_hash_table_steal (data->filetable, name1);
-		g_hash_table_steal (data->filetable, name2);
-		g_hash_table_insert (data->filetable, name1, file2);
-		g_hash_table_insert (data->filetable, name2, file1);
+		g_hash_table_replace (data->filetable, name2, file1);
+		g_hash_table_replace (data->filetable, name1, file2);
 		break;
 	case RENAME_NOREPLACE:
-		if (g_hash_table_contains (data->filetable, newpath + 1))
+		if (file2 != NULL)
 			return -EEXIST;
 		// Fall through to default rename
 	default:
-		g_hash_table_steal (data->filetable, name1);
+		// This requires inode support to actually make sense to users.
+		// if (file2 != NULL && file1 == file2)
+		// 	return 0;
 		g_hash_table_insert (data->filetable, strdup (newpath+1), file1);
+		g_hash_table_steal (data->filetable, name1);
 		free (name1);
 	}
 	return 0;
@@ -280,9 +292,7 @@ static int pfs_truncate (const char* path, off_t size) {
 #else
 static int pfs_truncate (const char* path, off_t size, struct fuse_file_info* fi) {
 	if (fi != NULL) {
-		if (ftruncate (fi->fh, size) < 0)
-			return -errno;
-		return 0;
+		return pfs_ftruncate (path, size, fi);
 	}
 #endif
 	pfs_data* data = fuse_get_context ()->private_data;
@@ -316,15 +326,6 @@ static int pfs_write (const char* path, const char* buf, size_t size, off_t offs
 
 static int pfs_release (const char* path, struct fuse_file_info* fi) {
 	return close (fi->fh);
-}
-
-static int pfs_statfs (const char* path, struct statvfs* statbuf) {
-	pfs_data* data = fuse_get_context ()->private_data;
-	statbuf->f_files = g_hash_table_size (data->filetable);
-	statbuf->f_ffree = 0;
-	statbuf->f_favail = 0;
-	statbuf->f_namemax = NAME_MAX;
-	return 0;
 }
 
 static int pfs_fsync (const char* path, int datasync, struct fuse_file_info* fi) {
@@ -398,10 +399,8 @@ static int pfs_access (const char* path, int mode) {
 	return 0;
 }
 
-#if FUSE_USE_VERSION < 30
+// These two are used in pfs_getattr and pfs_truncate if FUSE_USE_VERSION >= 30.
 static int pfs_fgetattr (const char* path, struct stat* statbuf, struct fuse_file_info* fi) {
-	if (0 == strcmp (path, "/"))
-		return pfs_getattr (path, statbuf);
 	if (fstat (fi->fh, statbuf) < 0)
 		return -errno;
 	return 0;
@@ -412,7 +411,6 @@ static int pfs_ftruncate (const char* path, off_t size, struct fuse_file_info* f
 		return -errno;
 	return 0;
 }
-#endif
 
 #if FUSE_USE_VERSION < 30
 static int pfs_utimens (const char* path, const struct timespec tv[2]) {
@@ -438,3 +436,12 @@ static int pfs_fallocate (const char* path, int mode, off_t offset, off_t length
 		return -errno;
 	return 0;
 }
+
+#if FUSE_USE_VERSION >= 30
+static off_t pfs_lseek (const char* path, off_t offset, int whence, struct fuse_file_info *fi) {
+	off_t result = lseek (fi->fh, offset, whence);
+	if (result < 0)
+		return -errno;
+	return result;
+}
+#endif // pfs_lseek
