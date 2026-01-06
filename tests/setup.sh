@@ -42,18 +42,23 @@ cleanup() {
 # A test can be:
 # 1) skipped with `skip`, in which case it will not be executed at all;
 # 2) marked as an expected failure with `pending`, making it pass if it *fails* and `UNPEND` is not set.
+# By default, status code 0 is expected. This can be changed with `EXPECTED` variable.
 run_test() {
     local test_name="$1"
     shift
     local success
     local failure
+    local expected=${EXPECTED:-0}
     local result
     local log_dir="$TEST_ROOT/logs/$TEST_FILE/"
     local log_stdout="$log_dir/$test_name.stdout.log"
     local log_stderr="$log_dir/$test_name.stderr.log"
 
+    if [ -n "$PENDING_TEST" ]; then
+        print_blue "(pending) "
+    fi
     if [ -n "$SKIP_TEST" ]; then
-        print_yellow "$test_name\n"
+        print_yellow "(skipped) $test_name\n"
         return
     fi
     if [ -n "$PENDING_TEST" -a -z "$UNPEND" ]; then
@@ -67,7 +72,7 @@ run_test() {
     mkdir -p "$log_dir"
     (1>"$log_stdout" 2>"$log_stderr" "$@")
     result=$?
-    if [ $result = 0 ]; then
+    if [ $result = $expected ]; then
         $success "$test_name: ✓"
     else
         $failure "$test_name: ✗"
@@ -82,8 +87,8 @@ run_test() {
     fi
 
     if [ -n "$PENDING_TEST" ]; then
-        if [ $result = 0 ]; then
-            print_red "unexpected pass!"
+        if [ $result = $expected ]; then
+            print_red " unexpected pass!"
             result=127
         elif [ -z "$UNPEND" ]; then
             result=0
@@ -96,21 +101,27 @@ run_test() {
     fi
 }
 
+# Run a test exactly the same as `run_test`, but with an indent in output.
+subtest() {
+    printf "  "
+    run_test "$@"
+}
+
 # Mark a test as an expected failure.
 # This will make it pass if the command fails and fail if it succeeds.
 # Defining `UNPEND` with a non-empty value will reverse this.
 # Example: `pending run_test "Contains 1" sh -c "echo '246' | grep '1' -q"`
 pending() {
-    print_blue "(pending) "
     (PENDING_TEST=1 "$@") || exit $?
 }
 
 # Skip execution of a test.
 # Example: `skip run_test "Big oof" false`
 skip() {
-    print_yellow "(skipped) "
     (SKIP_TEST=1 "$@") || exit $?
 }
+
+# --- Helper functions for tests ---
 
 # Get a full path to a fixture file (printed to stdout).
 fixture() {
@@ -125,7 +136,11 @@ extract_file_info() {
 # Compare file metadata between two files to check if they are equivalent (as status code).
 # Does not check file contents.
 compare_file_info() {
-    test "q$(extract_file_info "$1")" = "q$(extract_file_info "$2")"
+    local info_1=extract_file_info "$1"
+    local info_2=extract_file_info "$2"
+    echo "$info_1"
+    echo "$info_2"
+    test "q$info_1" = "q$info_2"
 }
 
 # Get file's mode (permissions) (printed to stdout).
