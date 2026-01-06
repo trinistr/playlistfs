@@ -44,7 +44,7 @@ pacman -S fuse3 glib2
 
 To compile `playlistfs`, it is enough to run `make` (or `make bin`):
 ```sh
-make # Compile with libfuse3
+make # Compile with libfuse3 (recommended)
 FUSE=2 make # Compile with libfuse2
 # If something is messed up, remaking may help:
 make remake

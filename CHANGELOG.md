@@ -14,9 +14,13 @@ Note that versions before 0.3.0 were bumped at pretty much random points in time
 - FUSE and FUSE_VERSION flags for `make`.
   - FUSE=3 is default, can be set to FUSE=2 to compile against libfuse2.
   - FUSE_VERSION can set desired FUSE_USE_VERSION to use newer features of libfuse. By default it is either 35 or 29, depending on FUSE flag.
+- Support for `RENAME_NOREPLACE` and `RENAME_EXCHANGE` flags to `rename` with FUSE 3. In particular, this allows `mv --exchange`.
 
 **Changed**
 - `--version`/`-V` now outputs build date and libfuse's version the binary was built against.
+
+**Fixed**
+- Non-executable files are no longer installed with execution permissions.
 
 [Compare v0.3.1...main](https://github.com/trinistr/playlistfs/compare/v0.3.1...main)
 

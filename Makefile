@@ -74,9 +74,9 @@ install: install-bin install-man
 install-bin: bin
 	install --target-directory "$(PREFIX)/bin" -D -- $(TARGETDIR)/$(TARGET)
 install-man: man
-	install --target-directory "$(PREFIX)/share/man/man1" -D -- $(MANDIR)/$(TARGET).$(MAN_SECTION).gz
+	install --target-directory "$(PREFIX)/share/man/man1" -D --mode=644 -- $(MANDIR)/$(TARGET).$(MAN_SECTION).gz
 install-mime:
-	install --target-directory "$(PREFIX)/share/applications" -D -- $(DISTDIR)/share/applications/*
+	install --target-directory "$(PREFIX)/share/applications" -D --mode=644 -- $(DISTDIR)/share/applications/*
 	install --target-directory "$(PREFIX)/bin" -D -- $(TARGETDIR)/*
 	xdg-mime install --novendor $(DISTDIR)/share/mime/packages/*
 install-mime-default:
