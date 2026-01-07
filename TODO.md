@@ -13,3 +13,4 @@
 - Don't use default_permissions, as it prohibits things like link(2) on files not owned by user
 - (?) Remove "playlist" from auto-generated directory name
 - (?) Add an option --no-relative-lists to disable relative paths to lists themselves
+- include comments and magic in playlists

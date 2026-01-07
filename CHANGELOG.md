@@ -23,6 +23,11 @@ Note that versions before 0.3.0 were bumped at pretty much random points in time
   - `--symlink` is renamed to `--symlinks`.
   - `--(no-)relative-lists` is renamed to `--(no-)relative-paths`. An option to disable relative paths for lists themselves may be added in the future.
 - `--relative*` options are now visible in help output.
+- Changed installation processing:
+  - Compiled binary is now stripped during installation.
+  - The MIME package is now `playlistfs.xml` (previously `x-playlist.xml`), complying with specification.
+  - MIME type of playlists is now `text/x-playlistfs-playlist` (previously `text/x-playlist`).
+  - Old MIME definitions may be removed by deleting `<MIME DIR>/packages/x-playlist.xml` and running `update-mime-database`.
 
 **Fixed**
 - Non-executable files are no longer installed with execution permissions.

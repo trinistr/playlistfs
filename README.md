@@ -149,16 +149,18 @@ umount ~/mount_point
 
 ### Automatic mounting
 
-PlaylistFS comes with `text/x-playlist` MIME type. It is defined by `*.playlist` glob.
+PlaylistFS comes with `text/x-playlistfs-playlist` MIME type.
+It is defined by `*.playlist` glob.
 Corresponding definition is installed by `make install-mime`.
 `make install-mime-default` will also register the provided handler as default.
 
 If a default handler is registered, it is possible to automatically mount and
 unmount playlists. This is done by 'opening' **.playlist** files in file manager.
 Provided handler script will create an empty directory, with name formed by
-removing **.playlist** extension from the file, and mount this playlist there.
+removing **.playlist** extension from the file and adding "playlist",
+and mount this playlist there.
 If the directory already exists, it will be unmounted and deleted instead.
-Note that if a non-empty directory will not be removed if it happens to be
+Note that a non-empty directory will not be removed if it happens to be
 named like the playlist, and the automatic mounting will not work.
 
 ## License

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <mime-info xmlns="http://www.freedesktop.org/standards/shared-mime-info">
-  <mime-type type="text/x-playlist">
+  <mime-type type="text/x-playlistfs-playlist">
     <glob pattern="*.playlist"/>
-    <comment>PlaylistFS playlist</comment>
+    <comment xml:lang="en">PlaylistFS playlist</comment>
   </mime-type>
 </mime-info>
