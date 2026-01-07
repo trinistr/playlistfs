@@ -29,7 +29,7 @@ subtest "New name refers to the same file" compare_file_info "$TEST_MOUNT_POINT/
 subtest "Filesystem reports expected number of files" sh -c "test \$(stat --file-system --format=%c '$TEST_MOUNT_POINT') = 3"
 
 test_mount "$TEST_ROOT/fixtures/test.playlist"
-run_test "Try renaming a file with --no-clobber" mv --no-clobber "$TEST_MOUNT_POINT/fstab" "$TEST_MOUNT_POINT/test.playlist"
+run_test "Try renaming a file with --update=none" mv --update=none "$TEST_MOUNT_POINT/fstab" "$TEST_MOUNT_POINT/test.playlist"
 subtest "Old name is still present" test -f "$TEST_MOUNT_POINT/fstab"
 subtest "New name still refers to original file" compare_file_info "$TEST_MOUNT_POINT/test.playlist" "$(fixture test.playlist)"
 
