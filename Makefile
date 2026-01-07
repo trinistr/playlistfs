@@ -63,6 +63,8 @@ man: $(MANDIR)/$(TARGET).$(MAN_SECTION).gz
 
 # Run tests
 test: bin test-current
+test-current:
+	$(MAKE) -C tests
 
 # Install everything
 install-all: install install-mime install-mime-default
@@ -81,31 +83,6 @@ install-mime:
 	xdg-mime install --novendor $(DISTDIR)/share/mime/packages/*
 install-mime-default:
 	xdg-mime default $(shell basename $(DISTDIR)/share/applications/*) $(shell grep -o 'type="[^"]*' $(DISTDIR)/share/mime/packages/* | cut -c 7-)
-
-test-current:
-	@total=0; failed=0; \
-	for test_file in tests/test*.sh; do \
-		if [ -f "$$test_file" ]; then \
-			total=$$((total + 1)); \
-			echo "=== $$test_file ==="; \
-			chmod +x "$$test_file" 2>/dev/null; \
-			$(RUNFLAGS) ./"$$test_file"; \
-			if [ $$? -eq 0 ]; then \
-				echo "✓ $$test_file passed"; \
-			else \
-				echo "✗ $$test_file failed"; \
-				failed=$$((failed + 1)); \
-			fi; \
-			echo ""; \
-		fi; \
-	done; \
-	if [ $$failed -eq 0 ]; then \
-		echo "$$total test files executed, all tests nominal!"; \
-		exit 0; \
-	else \
-		echo "$$total test files executed, $$failed failed!"; \
-		exit 1; \
-	fi
 
 # Build manpage out of help
 $(MANDIR)/$(TARGET).$(MAN_SECTION): $(TARGETDIR)/$(TARGET)

@@ -33,8 +33,20 @@ run_test "Try renaming a file with --update=none" mv --update=none "$TEST_MOUNT_
 subtest "Old name is still present" test -f "$TEST_MOUNT_POINT/fstab"
 subtest "New name still refers to original file" compare_file_info "$TEST_MOUNT_POINT/test.playlist" "$(fixture test.playlist)"
 
-# exchange rename is supported on 3, but not 2
-if using_fuse3; then
+mv_supports_exchange() {
+    local tempfile=$(mktemp)
+    local tempfile_e=$(mktemp)
+    echo 1 > "$tempfile"
+    mv --exchange "$tempfile" "$tempfile_e" && test "x$(cat "$tempfile_e")" = "x1"
+    local result=$?
+    rm "$tempfile"
+    rm "$tempfile_e"
+    return $result
+}
+
+# Exchange rename is supported on 3, but not 2
+# Not all versions of `mv` support it either.
+if using_fuse3 && mv_supports_exchange; then
     test_mount "$TEST_ROOT/fixtures/test.playlist"
     run_test "Renaming with --exchange" mv --exchange "$TEST_MOUNT_POINT/fstab" "$TEST_MOUNT_POINT/test.playlist"
     subtest "New name refers to renamed file" compare_file_info "$TEST_MOUNT_POINT/test.playlist" "/etc/fstab"
