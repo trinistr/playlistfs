@@ -33,7 +33,7 @@ subtest "New name still refers to original file" compare_file_info "$TEST_MOUNT_
 if ("$BIN" -V | grep -q "libfuse 3"); then
     test_mount "$TEST_ROOT/fixtures/test.playlist"
     run_test "Renaming with --exchange" mv --exchange "$TEST_MOUNT_POINT/fstab" "$TEST_MOUNT_POINT/test.playlist"
-    subtest "New name refers to the file" compare_file_info "$TEST_MOUNT_POINT/test.playlist" "/etc/fstab"
+    subtest "New name refers to renamed file" compare_file_info "$TEST_MOUNT_POINT/test.playlist" "/etc/fstab"
     subtest "Old name refers to the other file" compare_file_info "$TEST_MOUNT_POINT/fstab" "$(fixture test.playlist)"
 fi
 

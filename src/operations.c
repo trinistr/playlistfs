@@ -251,18 +251,29 @@ static int pfs_rename (const char* path, const char* newpath, unsigned int flags
 	// All variants need to check the target in some way.
 	g_hash_table_lookup_extended (data->filetable, newpath + 1, (void**) &name2, (void**) &file2);
 
+	// Rename should first replace the target, according to standards.
+	// From rename(2):
+	//   If newpath already exists, it will be atomically replaced, so that there
+	//   is no point at which another process attempting to access newpath will
+	//   find it missing. However, there will probably be a window in which both
+	//   oldpath and newpath refer to the file being renamed.
 	switch (flags) {
 	case RENAME_EXCHANGE:
 		if (file2 == NULL)
 			return -ENOENT;
-		g_hash_table_replace (data->filetable, name2, file1);
-		g_hash_table_replace (data->filetable, name1, file2);
+		g_hash_table_steal (data->filetable, name2);
+		g_hash_table_insert (data->filetable, name2, file1);
+		g_hash_table_steal (data->filetable, name1);
+		g_hash_table_insert (data->filetable, name1, file2);
 		break;
 	case RENAME_NOREPLACE:
 		if (file2 != NULL)
 			return -EEXIST;
 		// Fall through to default rename
 	default:
+		// From rename(2):
+		//   If oldpath and newpath are existing hard links referring to the
+		//   same file, then rename() does nothing, and returns a success status.
 		// This requires inode support to actually make sense to users.
 		// if (file2 != NULL && file1 == file2)
 		// 	return 0;
