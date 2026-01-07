@@ -19,11 +19,11 @@
 #include "playlistfs.h"
 #include "files.h"
 
-// #if FUSE_USE_VERSION >= 30
-// static void* pfs_init (struct fuse_conn_info *conn, struct fuse_config *cfg);
-// #else
-// static void* pfs_init (struct fuse_conn_info *conn);
-// #endif // pfs_init
+#if FUSE_USE_VERSION >= 30
+static void* pfs_init (struct fuse_conn_info *conn, struct fuse_config *cfg);
+#else
+static void* pfs_init (struct fuse_conn_info *conn);
+#endif // pfs_init
 static void pfs_destroy (void *);
 static int pfs_statfs (const char *, struct statvfs *);
 #if FUSE_USE_VERSION >= 30
@@ -77,7 +77,7 @@ Allowed operations. Unused ones are commented out,
 deprecated are not listed at all.
 */
 struct fuse_operations pfs_operations = {
-	// .init = pfs_init, // These two are not necessarily useful
+	.init = pfs_init, // These two are not necessarily useful
 	.destroy = pfs_destroy,
 	.statfs = pfs_statfs, // = statvfs
 	.getattr = pfs_getattr,
@@ -132,13 +132,15 @@ struct fuse_operations pfs_operations = {
 	#endif
 };
 
-// #if FUSE_USE_VERSION < 30
-// static void* pfs_init (struct fuse_conn_info *conn) {
-// #else
-// static void* pfs_init (struct fuse_conn_info *conn, struct fuse_config *cfg) {
-// #endif
-// 	return fuse_get_context ()->private_data;
-// }
+#if FUSE_USE_VERSION < 30
+static void* pfs_init (struct fuse_conn_info *conn) {
+#else
+static void* pfs_init (struct fuse_conn_info *conn, struct fuse_config *cfg) {
+	cfg->attr_timeout = 0.0;
+	cfg->entry_timeout = 0.0;
+#endif
+	return fuse_get_context ()->private_data;
+}
 
 static void pfs_destroy (void* private_data) {
 	pfs_free_pfs_data ((pfs_data*) private_data);

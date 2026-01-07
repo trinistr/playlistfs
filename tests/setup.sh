@@ -123,6 +123,11 @@ skip() {
 
 # --- Helper functions for tests ---
 
+# Return 0 if running with FUSE 3, non-0 otherwise.
+using_fuse3() {
+    "$BIN" -V | grep -q "libfuse 3"
+}
+
 # Get a full path to a fixture file (printed to stdout).
 fixture() {
     printf "$TEST_ROOT/fixtures/$1"
