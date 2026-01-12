@@ -13,28 +13,35 @@ fi
 TEST_FILE="$(basename "$0")"
 # Temporary directory for tests
 TEST_TMP="$TEST_ROOT/tmp"
-# Mount point for tests
-TEST_MOUNT_POINT="$TEST_TMP/mount_point"
+# This is defined by `test_mount()` and `make_test_mount_point()`
+TEST_MOUNT_POINT=
 
 # --- Functions for tests ---
 
 # Mount filesystem at a test mount point with specified parameters.
 test_mount() {
     cleanup
-    mkdir -p "$TEST_MOUNT_POINT"
+    make_test_mount_point
     "$BIN" "$@" "$TEST_MOUNT_POINT"
 }
-# Mount filesystem with specified parameters.
-test_mount_x() {
-    cleanup
-    mkdir -p "$TEST_MOUNT_POINT"
-    "$BIN" "$@"
+
+# Perform cleanup before/after a test.
+cleanup() {
+    # Mount points may get into a glitchy state where they can't be tested as files,
+    # so we can't rely on -d or -e, or anything else.
+    if [ -n "$TEST_MOUNT_POINT" -a "$TEST_MOUNT_POINT" != "$TEST_TMP/MOUNT*" ]; then
+        if using_fuse3; then
+            fusermount3 -u "$TEST_MOUNT_POINT" 2>/dev/null || true
+        else
+            fusermount -u "$TEST_MOUNT_POINT" 2>/dev/null || true
+        fi
+        rmdir "$TEST_MOUNT_POINT"
+    fi
 }
 
-# Perform cleanup after a test.
-cleanup() {
-    fusermount -u "$TEST_MOUNT_POINT" 2>/dev/null || true
-    rm -rf "$TEST_TMP/*"
+# Create a temporary directory and set TEST_MOUNT_POINT to its name.
+make_test_mount_point() {
+    TEST_MOUNT_POINT="$(mktemp --tmpdir="$TEST_TMP" -dt "MOUNT.XXXXXX")"
 }
 
 # Run a test and check exit status.
@@ -45,7 +52,6 @@ cleanup() {
 # By default, status code 0 is expected. This can be changed with `EXPECTED` variable.
 run_test() {
     local test_name="$1"
-    shift
     local success
     local failure
     local expected=${EXPECTED:-0}
@@ -54,6 +60,7 @@ run_test() {
     local log_stdout="$log_dir/$test_name.stdout.log"
     local log_stderr="$log_dir/$test_name.stderr.log"
 
+    shift
     if [ -n "$PENDING_TEST" ]; then
         print_blue "(pending) "
     fi
@@ -70,7 +77,7 @@ run_test() {
     fi
 
     mkdir -p "$log_dir"
-    (1>"$log_stdout" 2>"$log_stderr" "$@")
+    { 1>"$log_stdout" 2>"$log_stderr" "$@"; }
     result=$?
     if [ $result = $expected ]; then
         $success "$test_name: ✓"
@@ -112,13 +119,13 @@ subtest() {
 # Defining `UNPEND` with a non-empty value will reverse this.
 # Example: `pending run_test "Contains 1" sh -c "echo '246' | grep '1' -q"`
 pending() {
-    (PENDING_TEST=1 "$@") || exit $?
+    PENDING_TEST=1 "$@" || exit $?
 }
 
 # Skip execution of a test.
 # Example: `skip run_test "Big oof" false`
 skip() {
-    (SKIP_TEST=1 "$@") || exit $?
+    SKIP_TEST=1 "$@" || exit $?
 }
 
 # --- Helper functions for tests ---
@@ -168,9 +175,16 @@ else
     print_blue() { printf -- "$1"; }
 fi
 
+full_cleanup() {
+    for TEST_MOUNT_POINT in "$TEST_TMP"/MOUNT*; do
+        cleanup
+    done
+    rm -rf "$TEST_TMP"/*
+}
+
 # Unmount filesystem on exit.
-trap cleanup EXIT INT TERM
+trap full_cleanup EXIT INT TERM
 
 # Just making sure here!
-cleanup
-mkdir -p "$TEST_MOUNT_POINT"
+full_cleanup
+mkdir -p "$TEST_TMP"

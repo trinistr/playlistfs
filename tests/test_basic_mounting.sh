@@ -14,7 +14,6 @@ run_test "Fails without arguments" sh -c '! "$BIN"'
 subtest "Prints an error that no mount point is specified" sh -c "'$BIN' 2>&1 \
     | grep -Fq 'error: no target mount point'"
 
-cleanup
-run_test "Succeeds mounting with only a mount point" "$BIN" "$TEST_MOUNT_POINT"
+run_test "Succeeds mounting with only a mount point" test_mount
 subtest "Warns about empty mount" sh -c "'$BIN' '$TEST_MOUNT_POINT' 2>&1 \
     | grep -Fq 'warning: no lists or files specified, mounting empty filesystem'"

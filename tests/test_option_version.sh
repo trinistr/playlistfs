@@ -10,6 +10,7 @@ run_test "-V run" "$BIN" -V
 subtest "Outputs current version with -V" sh -c "'$BIN' -V | grep -Eq 'PlaylistFS [0-9]+\.[0-9]+\.[0-9]+'"
 
 cleanup
+make_test_mount_point
 run_test "--version can be combined with mounting" \
     sh -c "'$BIN' --version '$(fixture test.playlist)' '$TEST_MOUNT_POINT' \
     | grep -Eq 'PlaylistFS [0-9]+\.[0-9]+\.[0-9]+'"

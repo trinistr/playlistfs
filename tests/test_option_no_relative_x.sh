@@ -4,8 +4,7 @@ TEST_ROOT="$(dirname "$(realpath "$0")")"
 . "$TEST_ROOT/setup.sh"
 
 cool_mount() {
-    # cd to use a relative path
-    (cd "$TEST_ROOT"; test_mount "$@" "$(fixture test.playlist)" -f "fixtures/fstab" -f "$(fixture script.sh)")
+    test_mount "$@" "$(fixture test.playlist)" -f "fixtures/fstab" -f "$(fixture script.sh)"
 }
 
 run_test "--no-relative mount" cool_mount --no-relative 
