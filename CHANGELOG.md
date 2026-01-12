@@ -8,6 +8,12 @@ Note that versions before 0.3.0 were bumped at pretty much random points in time
 
 ## [Next]
 
+[Compare v0.4.0...main](https://github.com/trinistr/playlistfs/compare/v0.4.0...main)
+
+## [v0.4.0] — 2026-01-12
+
+This update is mostly about supporting FUSE 3 to make PlaylistFS more compatible and introduce new features. However, some other changes and bugfixes also made it in.
+
 **Added**
 - Support for FUSE 3.
   - There is no attempt to force compatibility. All capabilities are in the default state.
@@ -41,9 +47,9 @@ Note that versions before 0.3.0 were bumped at pretty much random points in time
 - Non-executable files are no longer installed with execution permissions.
 - `--no-relative*` options can be overridden by later `--relative*` options and vice versa.
 
-[Compare v0.3.1...main](https://github.com/trinistr/playlistfs/compare/v0.3.1...main)
+[Compare v0.3.1...v0.4.0](https://github.com/trinistr/playlistfs/compare/v0.3.1...v0.4.0)
 
-## [v0.3.1]
+## [v0.3.1] — 2026-01-03
 
 **Added**
 - SANITIZER=1 flag to `make` to enable ASan. `SANITIZE=1 make test` will also add ASAN_OPTIONS to enable even more diagnostics.
@@ -51,9 +57,9 @@ Note that versions before 0.3.0 were bumped at pretty much random points in time
 **Fixed**
 - Buffer overflow in start-up code.
 
-[Compare v0.3.0...main](https://github.com/trinistr/playlistfs/compare/v0.3.0...v0.3.1)
+[Compare v0.3.0...v0.3.1](https://github.com/trinistr/playlistfs/compare/v0.3.0...v0.3.1)
 
-## [v0.3.0]
+## [v0.3.0] — 2026-01-03
 
 This update is focused on rewriting internals to make the code more maintainable and less error-prone. Nonetheless, there are a couple of new features and bugfixes.
 
@@ -121,6 +127,7 @@ This version was known as 0.9.0 at the time, so it reports that.
 - Several options passed to FUSE.
 
 [Next]: https://github.com/trinistr/playlistfs/tree/main
+[v0.4.0]: https://github.com/trinistr/playlistfs/tree/v0.4.0
 [v0.3.1]: https://github.com/trinistr/playlistfs/tree/v0.3.1
 [v0.3.0]: https://github.com/trinistr/playlistfs/tree/v0.3.0
 [v0.2.2]: https://github.com/trinistr/playlistfs/tree/v0.2.2

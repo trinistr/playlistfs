@@ -41,7 +41,7 @@
 #include <locale.h>
 
 #ifndef PLAYLISTFS_VERSION
-#define PLAYLISTFS_VERSION "0.3.1"
+#define PLAYLISTFS_VERSION "0.4.0"
 #endif // PLAYLISTFS_VERSION
 
 typedef struct {
