@@ -15,6 +15,7 @@ Note that versions before 0.3.0 were bumped at pretty much random points in time
   - FUSE=3 is default, can be set to FUSE=2 to compile against libfuse2.
   - FUSE_VERSION can set desired FUSE_USE_VERSION to use newer features of libfuse. By default it is either 35 or 29, depending on FUSE flag.
 - Support for `RENAME_NOREPLACE` and `RENAME_EXCHANGE` flags to `rename` with FUSE 3. In particular, this allows `mv --exchange`.
+- `uninstall*` targets for `make`, allowing easy deletion. `uninstall` targets mirror `install*` ones, except where no uninstall procedure exists.
 
 **Changed**
 - `--version`/`-V` now outputs build date and libfuse's version the binary was built against.
@@ -23,11 +24,18 @@ Note that versions before 0.3.0 were bumped at pretty much random points in time
   - `--symlink` is renamed to `--symlinks`.
   - `--(no-)relative-lists` is renamed to `--(no-)relative-paths`. An option to disable relative paths for lists themselves may be added in the future.
 - `--relative*` options are now visible in help output.
-- Changed installation processing:
+- Changed installation processes:
+  - Renamed targets:
+    - `install-all` -> `install-full`
+    - `install-mime` -> `install-supplementary`
+    - `install-mime-default` -> `install-set-default`
   - Compiled binary is now stripped during installation.
-  - The MIME package is now `playlistfs.xml` (previously `x-playlist.xml`), complying with specification.
+  - The MIME package is now `playlistfs.xml` (previously `x-playlist.xml`), complying with [specification](https://specifications.freedesktop.org/shared-mime-info/0.21/ar01s02.html).
   - MIME type of playlists is now `text/x-playlistfs-playlist` (previously `text/x-playlist`).
-  - Old MIME definitions may be removed by deleting `<MIME DIR>/packages/x-playlist.xml` and running `update-mime-database`.
+    - Old MIME definitions may be removed by deleting `<MIME DIR>/packages/x-playlist.xml` and running `update-mime-database <MIME DIR>`.
+  - `XDG_DATA_HOME` is used for installation if defined. `PREFIX`, if set explicitly, will override it.
+  - MIME package is installed using `install-mime-package` target, which is included in `install-supplementary`.
+  - `install-supplementary` will no longer install the `playlistfs` binary.
 
 **Fixed**
 - Non-executable files are no longer installed with execution permissions.

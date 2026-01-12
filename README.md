@@ -20,7 +20,7 @@ Some examples of what PlaylistFS can be used for:
 ## Compiling
 
 PlaylistFS has following library dependencies:
-- libfuse3 (or libfuse2)
+- libfuse3 (**recommended**) or libfuse2 (for old systems)
 - glib2
 
 On systems with separate development packages those need to be installed as
@@ -30,7 +30,7 @@ well. Of course, basic development environment is also needed:
 > [!WARNING]
 > Ubuntu has fuse2 packages incompatible with important GUI (and other) packages.
 > Installing them [may break your system](https://askubuntu.com/a/1409500).
-> Please use fuse3.
+> *Please use fuse3.*
 
 Ubuntu and Ubuntu-based distros (like Linux Mint):
 ```sh
@@ -42,7 +42,7 @@ Archlinux and Archlinux-based distros (like Manjaro):
 pacman -S fuse3 glib2
 ```
 
-To compile `playlistfs`, it is enough to run `make` (or `make bin`):
+To compile `playlistfs`, it is enough to run `make` (or `make bin`) in its directory:
 ```sh
 make # Compile with libfuse3 (recommended)
 FUSE=2 make # Compile with libfuse2
@@ -67,22 +67,32 @@ make test
 
 ## Installing
 
-Quick install:
+Quick install of the whole package:
 ```sh
-make install-all
+make install-full
 ```
 
 Installation can be done in several steps:
 - `make install` will install the compiled binary and man page;
   - `make install-bin` and `make install-man` install binary and man page separately;
-- `make install-mime` will install files needed for automatic mounting;
-- `make install-mime-default` will register the provided handler as default.
+- `make install-supplementary` will install MIME definitions, auto-mounting script and *.desktop* file for it;
+  - `make install-mime-package` installs only MIME definitions;
+- `make install-set-default` will register the auto-mounting script as the default handler for *.playlist* files. It is recommended not to run this with `sudo`.
 
 By default, files are installed in `~/.local` tree. This can be changed by
-supplying a PREFIX variable to invocation of `make`:
+supplying a `PREFIX` variable to invocation of `make`:
 ```sh
-PREFIX=/usr make install-all
+PREFIX=/usr make install
+# XDG_DATA_HOME is also respected if set
+make install-supplementary
+make install-set-default
 ```
+
+> [!NOTE]
+> `~/.local/bin` is usually not in PATH, so installed executables won't be found.
+> Either add it to PATH in your shell profile file or install system-wide.
+
+Everything can be uninstalled using `make uninstall-full` or more specific targets corresponding to parts that you want to uninstall (except `install-set-default` which has no uninstall counterpart).
 
 ## Usage
 
