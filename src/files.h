@@ -26,20 +26,23 @@
 #include <sys/stat.h>
 #include <sys/statvfs.h>
 #include <sys/types.h>
+#include <time.h>
 
 typedef struct {
-	GString* path;
-	nlink_t nlink;
-	mode_t type;
-	ino_t ino;
+	GString* path; // Path to original file
+	nlink_t nlink; // Number of links inside FS
+	ino_t ino; // File serial number
+	mode_t type; // Type of record, not type of the actual file
+	struct timespec ts; // When the record was created
 } pfs_file;
 
 /*
 Create a new pfs_file.
 @parameter full_path: The path of the file
-@parameter mode: The mode of the file
+@parameter type: The type of the file
+@parameter ts: Time when the file was created, if relevant
 */
-pfs_file* pfs_file_create (char* path, mode_t mode);
+pfs_file* pfs_file_create (const char* path, const mode_t type, const struct timespec* ts);
 
 /*
 Free a pfs_file. Should only be called if deleted from the file table.

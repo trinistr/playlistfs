@@ -20,10 +20,11 @@
 #include "pfs_libgen.h"
 #include "files.h"
 
-#include <string.h>
+#include <limits.h>
+#include <locale.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <locale.h>
+#include <string.h>
 
 #ifndef PATH_MAX
 // For now, this will be a hard limit in case it is not defined.
@@ -82,6 +83,7 @@ int main (int argc, char* argv[]) {
 	fflush(stdout);
 	fflush(stderr);
 
+	clock_gettime(CLOCK_REALTIME, &data->opts.started_at);
 	data->filetable = g_hash_table_new_full (g_str_hash, g_str_equal, free, pfs_file_free_void);
 	if (!pfs_build_playlist (data)) {
 		exit (EXIT_FAILURE);
@@ -279,7 +281,7 @@ static gboolean pfs_build_playlist_process_path (
 	}
 
 	struct stat filestat;
-	if (0 != stat (full_path, &filestat)) {
+	if (0 != lstat (full_path, &filestat)) {
 		printwarnf ("file '%s' is inaccessible, ignoring", path);
 	}
 	else if (S_ISDIR (filestat.st_mode)) {
@@ -287,14 +289,26 @@ static gboolean pfs_build_playlist_process_path (
 	}
 	else {
 		char* name = pfs_basename (path);
-		pfs_file* file = pfs_file_create (full_path, filestat.st_mode);
-		if (!name || !file) {
+		if (!name) {
 			printerr ("memory allocation failed");
 			return FALSE;
 		}
-		
-		// Replace in case we encountered the name already.
-		g_hash_table_replace (filetable, name, file);
+		if (strlen (name) <= NAME_MAX) {
+			// Set type to symlink/regular based on what we need, not what the file is.
+			mode_t type = !data->opts.symlinks ? S_IFREG : S_IFLNK;
+			pfs_file* file = pfs_file_create (full_path, type, &data->opts.started_at);
+			if (!file) {
+				printerr ("memory allocation failed");
+				return FALSE;
+			}
+			
+			// Replace in case we encountered the name already.
+			g_hash_table_replace (filetable, name, file);
+		}
+		else {
+			printwarnf ("filename '%s' is too long, ignoring", name);
+			free (name);
+		}
 	}
 	free (full_path);
 

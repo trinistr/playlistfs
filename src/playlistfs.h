@@ -30,26 +30,28 @@
 
 #include <fuse.h>
 #include <glib.h>
+#include <time.h>
 
 typedef struct {
 	char** files;
 	char** lists;
 	char* mount_point;
+	struct timespec started_at;
 	gboolean symlinks;
+	gboolean verbose;
+	gboolean show_version;
+	gboolean quiet;
 	struct {
 		gboolean all;
 		gboolean files;
 		gboolean paths;
 	} relative_disabled;
-	gboolean verbose;
-	gboolean show_version;
-	gboolean quiet;
 	struct {
+		char* fsname;
 		gboolean ro;
 		gboolean noexec;
 		gboolean noatime;
 		gboolean debug;
-		char* fsname;
 	} fuse;
 } pfs_options;
 

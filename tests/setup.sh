@@ -155,7 +155,12 @@ fixture() {
 
 # Get file's mode (permissions) (printed to stdout).
 extract_mode() {
-    LC_ALL=C \stat -c %A "$1"
+    LC_ALL=C \stat --format %A "$1"
+}
+
+# Get file's stat info with specified format (printed to stdout).
+extract_stat_f() {
+    LC_ALL=C \stat --format "$1" "$2"
 }
 
 # Get file's metadata from `ls`, excluding its name (printed to stdout).
@@ -182,7 +187,7 @@ compare_stat_info() {
     local info_b="$(stat --terse -- "$2" | cut -d' ' -f2-)"
     echo "$1: '$info_a'"
     echo "$2: '$info_b'"
-    test "$info_a" == "$info_b"
+    test "$info_a" = "$info_b"
 }
 
 # --- General setup ---

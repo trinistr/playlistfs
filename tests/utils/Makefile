@@ -1,3 +1,3 @@
 VPATH=src
 
-all: rename rename_exchange rename_noreplace
+all: rename rename_exchange rename_noreplace times

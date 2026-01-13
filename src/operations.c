@@ -19,11 +19,13 @@
 #include "playlistfs.h"
 #include "files.h"
 
+#include <errno.h>
 #include <limits.h>
-#include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/types.h>
+#include <unistd.h>
 
 #if FUSE_USE_VERSION >= 30
 static void* pfs_init (struct fuse_conn_info *conn, struct fuse_config *cfg);
@@ -198,6 +200,8 @@ static int pfs_getattr (const char* path, struct stat* statbuf, struct fuse_file
 		statbuf->st_uid = context->uid;
 		statbuf->st_gid = context->gid;
 		statbuf->st_size = file->path->len;
+		statbuf->st_atim.tv_sec = statbuf->st_ctim.tv_sec = statbuf->st_mtim.tv_sec = file->ts.tv_sec;
+		statbuf->st_atim.tv_nsec = statbuf->st_ctim.tv_nsec = statbuf->st_mtim.tv_nsec = file->ts.tv_nsec;
 	}
 	statbuf->st_ino = file->ino;
 	statbuf->st_nlink = file->nlink;
@@ -209,8 +213,16 @@ static int pfs_readlink (const char* path, char* buf, size_t size) {
 	pfs_file* file = g_hash_table_lookup (data->filetable, path + 1);
 	if (!file)
 		return -ENOENT;
-	strncpy (buf, file->path->str, size);
-	buf[size - 1] = '\0';
+	if (S_ISLNK (file->type)) {
+		strncpy (buf, file->path->str, size);
+		buf[size - 1] = '\0';
+	}
+	else {
+		ssize_t length = readlink (file->path->str, buf, size-1);
+		if (length < 0)
+			return -errno;
+		buf[length] = '\0';
+	}
 	return 0;
 }
 
@@ -232,7 +244,9 @@ static int pfs_symlink (const char* path, const char* link) {
 	pfs_data* data = fuse_get_context ()->private_data;
 	if (g_hash_table_contains (data->filetable, link + 1))
 		return -EEXIST;
-	pfs_file* file = pfs_file_create (strdup(path), S_IFLNK|0777);
+	struct timespec now;
+	clock_gettime (CLOCK_REALTIME, &now);
+	pfs_file* file = pfs_file_create (strdup(path), S_IFLNK, &now);
 	if (file == NULL)
 		return -ENOSPC;
 	g_hash_table_insert (data->filetable, strdup(link + 1), file);

@@ -10,7 +10,7 @@ subtest "File info: user-owned" compare_file_info "$TEST_MOUNT_POINT/test.playli
 subtest "File info: root-owned" compare_file_info "$TEST_MOUNT_POINT/fstab" "/etc/fstab"
 
 cleanup
-run_test "Fails without arguments" sh -c '! "$BIN"'
+run_test "Fails without arguments" ! "$BIN"
 subtest "Prints an error that no mount point is specified" sh -c "'$BIN' 2>&1 \
     | grep -Fq 'error: no target mount point'"
 

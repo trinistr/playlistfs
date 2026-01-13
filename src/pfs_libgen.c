@@ -20,9 +20,9 @@
 
 #define _XOPEN_SOURCE 700 // strdup()
 
-#include <string.h>
 #include <stddef.h>
 #include <stdlib.h>
+#include <string.h>
 
 /*
 From dirname(3):

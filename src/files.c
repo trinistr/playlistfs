@@ -24,12 +24,12 @@
 
 static ino_t current_ino = PFS_FILE_INO_MIN;
 
-pfs_file* pfs_file_create (char* full_path, mode_t mode) {
+pfs_file* pfs_file_create (const char* full_path, const mode_t type, const struct timespec* ts) {
 	ino_t new_ino = pfs_file_next_ino ();
 	if (new_ino == 0)
 		return NULL;
 
-	pfs_file* file = malloc (sizeof (*file));
+	pfs_file* file = calloc (1, sizeof (*file));
 	if (!file)
 		return NULL;
 	file->path = g_string_new (full_path);
@@ -37,8 +37,12 @@ pfs_file* pfs_file_create (char* full_path, mode_t mode) {
 		free (file);
 		return NULL;
 	}
-	file->type = mode&S_IFMT;
-	file->nlink = S_ISDIR(mode) ? 2 : 1;
+	if (ts != NULL) {
+		file->ts.tv_sec = ts->tv_sec;
+		file->ts.tv_nsec = ts->tv_nsec;
+	}
+	file->type = type&S_IFMT;
+	file->nlink = S_ISDIR(type) ? 2 : 1;
 	file->ino = new_ino;
 	return file;
 }
