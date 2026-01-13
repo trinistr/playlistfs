@@ -19,30 +19,17 @@
 #ifndef PLAYLISTFS_H
 #define PLAYLISTFS_H
 
+#include "playlistfs_version.h"
+
 #ifndef FUSE_USE_VERSION
 #define FUSE_USE_VERSION 35
 #endif
 
-#define _XOPEN_SOURCE 700 // Several functions, including pread and pwrite
-#define _GNU_SOURCE // GNU fallocate()
+#define _GNU_SOURCE // _XOPEN_SOURCE & GNU fallocate(), pread(), pwrite() and other
 #define _FILE_OFFSET_BITS 64 // FUSE requires 64-bit off_t
 
 #include <fuse.h>
 #include <glib.h>
-
-#include <string.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <limits.h>
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <unistd.h>
-#include <errno.h>
-#include <locale.h>
-
-#ifndef PLAYLISTFS_VERSION
-#define PLAYLISTFS_VERSION "0.4.0"
-#endif // PLAYLISTFS_VERSION
 
 typedef struct {
 	char** files;

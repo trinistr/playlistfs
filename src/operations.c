@@ -19,6 +19,10 @@
 #include "playlistfs.h"
 #include "files.h"
 
+#include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
+
 #if FUSE_USE_VERSION >= 30
 static void* pfs_init (struct fuse_conn_info *conn, struct fuse_config *cfg);
 #else

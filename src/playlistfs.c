@@ -20,6 +20,11 @@
 #include "pfs_libgen.h"
 #include "files.h"
 
+#include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <locale.h>
+
 #ifndef PATH_MAX
 // For now, this will be a hard limit in case it is not defined.
 #define PATH_MAX 4096

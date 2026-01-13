@@ -35,7 +35,7 @@ cleanup() {
         else
             fusermount -u "$TEST_MOUNT_POINT" 2>/dev/null || true
         fi
-        rmdir "$TEST_MOUNT_POINT"
+        rmdir "$TEST_MOUNT_POINT" 2>/dev/null
     fi
 }
 
