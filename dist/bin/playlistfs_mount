@@ -14,9 +14,7 @@ playlist_dir="`dirname $playlist`/`basename $playlist .playlist` playlist"
 shift
 
 if [ -d "$playlist_dir" ]; then
-	fusermount -u -- "$playlist_dir"
-	rmdir "$playlist_dir"
+	fusermount3 -u -- "$playlist_dir" && rmdir "$playlist_dir"
 else
-	mkdir -p -- "$playlist_dir"
-	playlistfs "$@" -- "$playlist" "$playlist_dir"
+	mkdir -p -- "$playlist_dir" && playlistfs "$@" -- "$playlist" "$playlist_dir"
 fi

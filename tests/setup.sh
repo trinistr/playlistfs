@@ -46,21 +46,30 @@ make_test_mount_point() {
 
 # Run a test and check exit status.
 # Example: `run_test "Contains /" grep "/" /etc/fstab -q`
+#
 # A test can be:
 # 1) skipped with `skip`, in which case it will not be executed at all;
 # 2) marked as an expected failure with `pending`, making it pass if it *fails* and `UNPEND` is not set.
+#
 # By default, status code 0 is expected. This can be changed with `EXPECTED` variable.
+# If the first argument after test name is "!", status code must not be equal to expected value.
 run_test() {
     local test_name="$1"
     local success
     local failure
-    local expected=${EXPECTED:-0}
+    local expected_status=${EXPECTED:-0}
+    local not_expected=0
     local result
+    local passed
     local log_dir="$TEST_ROOT/logs/$TEST_FILE/"
     local log_stdout="$log_dir/$test_name.stdout.log"
     local log_stderr="$log_dir/$test_name.stderr.log"
 
     shift
+    if [ "$1" = "!" ]; then
+        not_expected=1
+        shift
+    fi
     if [ -n "$PENDING_TEST" ]; then
         print_blue "(pending) "
     fi
@@ -79,7 +88,11 @@ run_test() {
     mkdir -p "$log_dir"
     { 1>"$log_stdout" 2>"$log_stderr" "$@"; }
     result=$?
-    if [ $result = $expected ]; then
+
+    [ $result = $expected_status ] || [ $not_expected -eq 1 ]
+    passed=$?
+
+    if [ $passed -eq 0 ]; then
         $success "$test_name: ✓"
     else
         $failure "$test_name: ✗"
@@ -94,17 +107,17 @@ run_test() {
     fi
 
     if [ -n "$PENDING_TEST" ]; then
-        if [ $result = $expected ]; then
-            print_red " unexpected pass!"
-            result=127
+        if [ $passed -eq 0 ]; then
+            print_red " unexpected pass!\n"
+            passed=127
         elif [ -z "$UNPEND" ]; then
-            result=0
+            passed=0
         fi
     fi
     echo
 
-    if [ $result != 0 ]; then
-        exit $result
+    if [ $passed -ne 0 ]; then
+        exit $passed
     fi
 }
 
@@ -140,24 +153,36 @@ fixture() {
     printf "$TEST_ROOT/fixtures/$1"
 }
 
+# Get file's mode (permissions) (printed to stdout).
+extract_mode() {
+    LC_ALL=C \stat -c %A "$1"
+}
+
 # Get file's metadata from `ls`, excluding its name (printed to stdout).
 extract_file_info() {
-    LC_ALL=C \ls -lh --full-time "$1" | awk '{print $1, $2, $3, $4, $5, $6}'
+    LC_ALL=C \ls -lh --full-time -- "$1" | awk '{print $1, $2, $3, $4, $5, $6}'
 }
 
 # Compare file metadata between two files to check if they are equivalent (as status code).
 # Does not check file contents.
+# Suitable for different filesystems.
 compare_file_info() {
     local info_a="$(extract_file_info "$1")"
     local info_b="$(extract_file_info "$2")"
-    echo "'$info_a'"
-    echo "'$info_b'"
-    test "q$info_a" = "q$info_b"
+    echo "$1: '$info_a'"
+    echo "$2: '$info_b'"
+    test "$info_a" = "$info_b"
 }
 
-# Get file's mode (permissions) (printed to stdout).
-extract_mode() {
-    LC_ALL=C \stat -c %A "$1"
+# Compare stat metadata between two files to check uf they are equivalent (as status code).
+# Does not check file contents.
+# Suitable when fiels reside on the same filesystem.
+compare_stat_info() {
+    local info_a="$(stat --terse -- "$1" | cut -d' ' -f2-)"
+    local info_b="$(stat --terse -- "$2" | cut -d' ' -f2-)"
+    echo "$1: '$info_a'"
+    echo "$2: '$info_b'"
+    test "$info_a" == "$info_b"
 }
 
 # --- General setup ---

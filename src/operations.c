@@ -140,8 +140,9 @@ struct fuse_operations pfs_operations = {
 static void* pfs_init (struct fuse_conn_info *conn) {
 #else
 static void* pfs_init (struct fuse_conn_info *conn, struct fuse_config *cfg) {
+	// FUSE 2 uses options in argv for these for this, see playlistfs.c.
 	cfg->attr_timeout = 0.0;
-	cfg->entry_timeout = 0.0;
+	cfg->use_ino = 1;
 #endif
 	return fuse_get_context ()->private_data;
 }
@@ -169,6 +170,7 @@ static int pfs_getattr (const char* path, struct stat* statbuf, struct fuse_file
 	if (0 == strcmp (path, "/")) {
 		statbuf->st_mode = S_IFDIR | 0777;
 		statbuf->st_nlink = 2;
+		statbuf->st_ino = 1;
 		return 0;
 	}
 
@@ -192,7 +194,8 @@ static int pfs_getattr (const char* path, struct stat* statbuf, struct fuse_file
 		statbuf->st_gid = context->gid;
 		statbuf->st_size = file->path->len;
 	}
-	statbuf->st_nlink = file->nlinks;
+	statbuf->st_ino = file->ino;
+	statbuf->st_nlink = file->nlink;
 	return 0;
 }
 
@@ -214,7 +217,7 @@ static int pfs_unlink (const char* path) {
 		return -ENOENT;
 	g_hash_table_steal (data->filetable, key);
 	free (key);
-	if (--file->nlinks == 0) {
+	if (--file->nlink == 0) {
 		pfs_file_free(file);
 	}
 	return 0;
@@ -280,9 +283,8 @@ static int pfs_rename (const char* path, const char* newpath, unsigned int flags
 		// From rename(2):
 		//   If oldpath and newpath are existing hard links referring to the
 		//   same file, then rename() does nothing, and returns a success status.
-		// This requires inode support to actually make sense to users.
-		// if (file2 != NULL && file1 == file2)
-		// 	return 0;
+		if (file2 != NULL && file1 == file2)
+			return 0;
 		g_hash_table_insert (data->filetable, strdup (newpath+1), file1);
 		g_hash_table_steal (data->filetable, name1);
 		free (name1);
@@ -300,7 +302,7 @@ static int pfs_link (const char* path, const char* newpath) {
 	if (!key)
 		return -errno;
 	g_hash_table_insert (data->filetable, key, file);
-	file->nlinks++;
+	file->nlink++;
 	return 0;
 }
 

@@ -1,5 +1,5 @@
 - (?) use lstat instead of stat for original files when building table
-- handle dereferencing or not of symlinks
+- (?) handle dereferencing or not of symlinks
 - (?) actually implement atime touching (though shouldn't it just work?)
 - --unmount/-u option (use fusermount -u / umount)
 - (?) redo --no-relative-* as positive options and flags
@@ -8,9 +8,12 @@
 - Add optional failures when something can't be accessed instead of skipping
 - (?) s/PATH_MAX/NAME_MAX + 1/
 - Impose (large) limits on paths to prevent runaway allocation
-- Use our own inode numbers (and track them)
-- Don't rename file to itself, see rename(2)
 - Don't use default_permissions, as it prohibits things like link(2) on files not owned by user
 - (?) Remove "playlist" from auto-generated directory name
 - (?) Add an option --no-relative-lists to disable relative paths to lists themselves
-- include comments and magic in playlists
+- Change playlist format:
+  - Prohibit bytes < 0x20 (control codes) (and we don't care about non-ASCII-compatible encodings)
+  - Add comments
+  - Add magic (in comment) to detect MIME type
+- Add final list of files in a hidden file inside directory
+  - Use it for magic too!

@@ -364,6 +364,15 @@ static gboolean pfs_relative_option_callback (
 	const char* option_name, const char* value, gpointer data, GError** error
 );
 
+// static gboolean pfs_show_fuse_help_callback (
+// 	const char* option_name, const char* value, gpointer data, GError** error
+// ) {
+// 	*error = NULL;
+// 	char* argv[] = {"", "--help", NULL};
+// 	fuse_main(2, argv, &pfs_operations, NULL);
+// 	return TRUE;
+// }
+
 static GOptionContext* pfs_setup_options (
 	pfs_options* opts
 ) {
@@ -408,6 +417,7 @@ static GOptionContext* pfs_setup_options (
 		{ "noatime", 0, G_OPTION_FLAG_NONE, G_OPTION_ARG_NONE, &opts->fuse.noatime, "Do not update time of access", NULL},
 		{ "fsname", 0, G_OPTION_FLAG_NONE, G_OPTION_ARG_STRING, &opts->fuse.fsname, "Set filesystem name", "NAME"},
 		{ "debug", 'd', G_OPTION_FLAG_NONE, G_OPTION_ARG_NONE, &opts->fuse.debug, "Enable debugging mode", NULL},
+		// { "fuse-help", 0, G_OPTION_FLAG_HIDDEN|G_OPTION_FLAG_NO_ARG, G_OPTION_ARG_CALLBACK, pfs_show_fuse_help_callback, NULL, NULL},
 		{}
 	};
 	g_option_group_add_entries (optionsFuseGroup, optionsFuse);
@@ -500,6 +510,10 @@ static gboolean pfs_relative_option_callback (
 	return TRUE;
 }
 
+/*
+---- Other helpers ----
+*/
+
 static gboolean pfs_check_mount_point (
 	pfs_data* data
 ) {
@@ -543,12 +557,12 @@ static gboolean pfs_setup_fuse_arguments (
 	fuse_argv[fuse_argc++] = "-odefault_permissions";
 	fuse_argv[fuse_argc++] = "-osubtype=playlistfs";
 
-	printinfo ("Passing options to FUSE:");
 	if (!pfs_setup_fuse_fsname(&fuse_argv[fuse_argc], data)) {
 		printerr ("memory allocation failed");
 		free (fuse_argv);
 		return FALSE;
 	}
+	printinfo ("Passing options to FUSE:");
 	printinfof ("\t%s (filesystem name)", fuse_argv[fuse_argc]);
 	fuse_argc++;
 
@@ -568,6 +582,12 @@ static gboolean pfs_setup_fuse_arguments (
 		fuse_argv[fuse_argc++] = "-onoexec";
 		printinfo ("\t-onoexec (do not allow execution)");
 	}
+
+	// FUSE 3 has these in struct fuse_config, see operations.c.
+	#if FUSE_USE_VERSION < 30
+		fuse_argv[fuse_argc++] = "-oattr_timeout=0";
+		fuse_argv[fuse_argc++] = "-ouse_ino";
+	#endif
 
 	*argc = fuse_argc;
 	*argv = fuse_argv;

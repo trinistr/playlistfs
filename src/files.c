@@ -22,12 +22,27 @@
 
 #include <stdlib.h>
 
+static ino_t current_ino = PFS_FILE_MIN_USED_INO;
+
+/*
+Get next inode number between PFS_FILE_MIN_USED_INO and PFS_FILE_MAX_USED_INO, inclusive.
+*/
+static ino_t next_ino () {
+	if (current_ino > PFS_FILE_MAX_USED_INO)
+		return current_ino;
+	return current_ino++;
+}
+
 /*
 Create a new pfs_file.
 @parameter full_path: The path of the file
 @parameter mode: The mode of the file
 */
-pfs_file* pfs_file_create (char* full_path, __mode_t mode) {
+pfs_file* pfs_file_create (char* full_path, mode_t mode) {
+	ino_t new_ino = next_ino ();
+	if (new_ino == PFS_FILE_MAX_USED_INO)
+		return NULL;
+
 	pfs_file* file = malloc (sizeof (*file));
 	if (!file)
 		return NULL;
@@ -37,7 +52,8 @@ pfs_file* pfs_file_create (char* full_path, __mode_t mode) {
 		return NULL;
 	}
 	file->type = mode&S_IFMT;
-	file->nlinks = (mode&S_IFMT) == S_IFDIR ? 2 : 1;
+	file->nlink = S_ISDIR(mode) ? 2 : 1;
+	file->ino = new_ino;
 	return file;
 }
 

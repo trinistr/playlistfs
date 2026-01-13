@@ -8,6 +8,14 @@ Note that versions before 0.3.0 were bumped at pretty much random points in time
 
 ## [Next]
 
+**Added**
+- Persistent, unique inode numbers.
+  - Each file added during initialization gets its own inode number.
+  - `link`ed names will use the same inode number. Other software can detect this situtation now.
+
+**Changed**
+- Due to using inode numbers, rename(2) will no longer do anything when asked to rename file to itself, as it should.
+
 [Compare v0.4.0...main](https://github.com/trinistr/playlistfs/compare/v0.4.0...main)
 
 ## [v0.4.0] — 2026-01-12

@@ -1,4 +1,4 @@
-test:
+test: utils
 	@total=0; failed=0; \
 	for test_file in test*.sh; do \
 		if [ -f "$$test_file" ]; then \
@@ -22,3 +22,8 @@ test:
 		echo "$$total test files executed, $$failed failed!"; \
 		exit 1; \
 	fi
+
+utils:
+	$(MAKE) -C utils
+
+.PHONY: test utils

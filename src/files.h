@@ -27,12 +27,26 @@
 
 typedef struct {
 	GString* path;
-	__nlink_t nlinks;
-	__mode_t type;
+	nlink_t nlink;
+	mode_t type;
+	ino_t ino;
 } pfs_file;
 
-pfs_file* pfs_file_create (char* path, __mode_t mode);
+pfs_file* pfs_file_create (char* path, mode_t mode);
 void pfs_file_free (pfs_file*);
 void pfs_file_free_void (void*);
+
+/*
+This is the minimum inode number used by pfs_file_create();
+Smaller values can be used freely for other things.
+*/
+#define PFS_FILE_MIN_USED_INO ((ino_t)1 << 16)
+/*
+And this is the maximum.
+Most files that can be created is
+  (PFS_FILE_MAX_USED_INO - PFS_FILE_MIN_USED_INO + 1),
+though, realistically, memory will run out first.
+*/
+#define PFS_FILE_MAX_USED_INO ((ino_t)1 << (sizeof(ino_t) * 8 - 2))
 
 #endif // PLAYLISTFS_FILES_H
