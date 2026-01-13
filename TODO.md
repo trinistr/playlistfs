@@ -6,8 +6,7 @@
 - (?) add option to mount over non-empty directory (will always work in FUSE 3 anyway)
 - Fix memory leaks in operations
 - Add optional failures when something can't be accessed instead of skipping
-- (?) s/PATH_MAX/NAME_MAX + 1/
-- Impose (large) limits on paths to prevent runaway allocation
+- (?) Impose (large) limits on paths to prevent runaway allocation
 - Don't use default_permissions, as it prohibits things like link(2) on files not owned by user
 - (?) Remove "playlist" from auto-generated directory name
 - (?) Add an option --no-relative-lists to disable relative paths to lists themselves
@@ -15,5 +14,6 @@
   - Prohibit bytes < 0x20 (control codes) (and we don't care about non-ASCII-compatible encodings)
   - Add comments
   - Add magic (in comment) to detect MIME type
+  - Add file name mapping
 - Add final list of files in a hidden file inside directory
   - Use it for magic too!

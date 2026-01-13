@@ -3,53 +3,76 @@
 TEST_ROOT="$(dirname "$(realpath "$0")")"
 . "$TEST_ROOT/setup.sh"
 
-# Deletion
+number_of_files() {
+    ls "$TEST_MOUNT_POINT" | wc -l
+}
+
+number_of_inodes() {
+    stat --file-system --format=%c "$TEST_MOUNT_POINT"
+}
+
+# ---- stat ----
+
+# These tests are mostly here to establish baseline.
+test_mount "$TEST_ROOT/fixtures/test.playlist"
+run_test "File system has number of files equal to listed unique names" test $(number_of_files) = 3
+run_test "File system reports inode number equal to file count + 1" test $(number_of_inodes) = 4
+
+# ---- unlink ----
 
 test_mount "$TEST_ROOT/fixtures/test.playlist"
-run_test "Deleting a file" rm "$TEST_MOUNT_POINT/test.playlist"
+run_test "Deleting a file" unlink "$TEST_MOUNT_POINT/test.playlist"
 subtest "File no longer exists" test ! -f "$TEST_MOUNT_POINT/test.playlist"
-subtest "There are less files now" sh -c "test \$(ls '$TEST_MOUNT_POINT' | wc -l) = 2"
-subtest "Filesystem reports expected less number of files" sh -c "test \$(stat --file-system --format=%c '$TEST_MOUNT_POINT') = 2"
+subtest "There are less files now" test $(number_of_files) = 2
+subtest "Filesystem reports the same number of inodes" test $(number_of_inodes) = 4
 
-# Linking
+run_test "Trying to delete non-existent file" ! unlink "$TEST_MOUNT_POINT/test"
+
+# ---- link & symlink ----
 
 test_mount "$TEST_ROOT/fixtures/test.playlist"
-run_test "Linking a file" ln "$TEST_MOUNT_POINT/test.playlist" "$TEST_MOUNT_POINT/test"
+run_test "Linking a file" link "$TEST_MOUNT_POINT/test.playlist" "$TEST_MOUNT_POINT/test"
 subtest "Old name exists" test -f "$TEST_MOUNT_POINT/test.playlist"
 subtest "New name exists" test -f "$TEST_MOUNT_POINT/test"
 subtest "New name refers to the same file" compare_stat_info "$TEST_MOUNT_POINT/test.playlist" "$TEST_MOUNT_POINT/test"
-subtest "There are more files now" sh -c "test \$(ls '$TEST_MOUNT_POINT' | wc -l) = 4"
-subtest "Filesystem reports expected greater number of files" sh -c "test \$(stat --file-system --format=%c '$TEST_MOUNT_POINT') = 4"
+subtest "There are more files now" test $(number_of_files) = 4
+subtest "Filesystem reports the same number of inodes" test $(number_of_inodes) = 4
 
 test_mount "$TEST_ROOT/fixtures/test.playlist"
 run_test "Symlinking a file" ln -s "$TEST_MOUNT_POINT/test.playlist" "$TEST_MOUNT_POINT/test"
 subtest "File exists" test -f "$TEST_MOUNT_POINT/test.playlist"
-subtest "Link exists" test -f "$TEST_MOUNT_POINT/test"
+subtest "Link exists" test -L "$TEST_MOUNT_POINT/test"
 subtest "Link links to the file" test "$(readlink "$TEST_MOUNT_POINT/test")" = "$TEST_MOUNT_POINT/test.playlist"
-subtest "There are more files now" sh -c "test \$(ls '$TEST_MOUNT_POINT' | wc -l) = 4"
-subtest "Filesystem reports expected greater number of files" sh -c "test \$(stat --file-system --format=%c '$TEST_MOUNT_POINT') = 4"
+subtest "There are more files now" test $(number_of_files) = 4
+subtest "Filesystem reports greater number of inodes" test $(number_of_inodes) = 5
 
 test_mount "$TEST_ROOT/fixtures/test.playlist"
 run_test "Symlinking a file outside" ln -s "$(fixture ëñ)" "$TEST_MOUNT_POINT/test"
-subtest "Link exists" test -f "$TEST_MOUNT_POINT/test"
+subtest "Link exists" test -L "$TEST_MOUNT_POINT/test"
 subtest "Link links to the file" test "$(readlink "$TEST_MOUNT_POINT/test")" = "$(fixture ëñ)"
-subtest "There are more files now" sh -c "test \$(ls '$TEST_MOUNT_POINT' | wc -l) = 4"
-subtest "Filesystem reports expected greater number of files" sh -c "test \$(stat --file-system --format=%c '$TEST_MOUNT_POINT') = 4"
+subtest "There are more files now" test $(number_of_files) = 4
+subtest "Filesystem reports greater number of inodes" test $(number_of_inodes) = 5
 
-run_test "Linking a symlink" ln "$TEST_MOUNT_POINT/test" "$TEST_MOUNT_POINT/testy"
+run_test "Linking a symlink" link "$TEST_MOUNT_POINT/test" "$TEST_MOUNT_POINT/testy"
 subtest "Both links are are the same symlink" compare_stat_info "$TEST_MOUNT_POINT/test" "$TEST_MOUNT_POINT/testy"
 subtest "Link links to the file" test "$(readlink "$TEST_MOUNT_POINT/testy")" = "$(fixture ëñ)"
-subtest "There are more files now" sh -c "test \$(ls '$TEST_MOUNT_POINT' | wc -l) = 5"
-subtest "Filesystem reports expected greater number of files" sh -c "test \$(stat --file-system --format=%c '$TEST_MOUNT_POINT') = 5"
+subtest "There are more files now" test $(number_of_files) = 5
+subtest "Filesystem reports the same number of inodes" test $(number_of_inodes) = 5
 
-# Renaming
+test_mount "$TEST_ROOT/fixtures/test.playlist"
+run_test "Symlinking a non-existent file outside" ln -s "$(fixture FAKE)" "$TEST_MOUNT_POINT/test"
+subtest "Link exists" test -L "$TEST_MOUNT_POINT/test"
+subtest "File does not exist" ! test -e "$(fixture FAKE)"
+subtest "Link links to the path" test "$(readlink "$TEST_MOUNT_POINT/test")" = "$(fixture FAKE)"
+
+# ---- rename ----
 
 test_mount "$TEST_ROOT/fixtures/test.playlist"
 run_test "Renaming a file" mv "$TEST_MOUNT_POINT/fstab" "$TEST_MOUNT_POINT/fstab2"
 subtest "Old name no longer exists" test ! -f "$TEST_MOUNT_POINT/fstab"
 subtest "New name exists" test -f "$TEST_MOUNT_POINT/fstab2"
 subtest "New name refers to the same file" compare_file_info "$TEST_MOUNT_POINT/fstab2" "/etc/fstab"
-subtest "Filesystem reports expected number of files" sh -c "test \$(stat --file-system --format=%c '$TEST_MOUNT_POINT') = 3"
+subtest "Filesystem reports the same number of inodes" sh -c "test \$(stat --file-system --format=%c '$TEST_MOUNT_POINT') = 4"
 
 # From rename(2):
 # If oldpath and newpath are existing hard links referring to the same file, then rename() does nothing, and returns a success status.

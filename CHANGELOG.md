@@ -15,6 +15,7 @@ Note that versions before 0.3.0 were bumped at pretty much random points in time
 
 **Changed**
 - Due to using inode numbers, rename(2) will no longer do anything when asked to rename file to itself, as it should.
+- `stat`ing the file system now reports semi-accurate inode numbers: not increasing on link(2), increasing on symlink(2), not decreasing on unlink(2). Additionally, file system will now report "free" inodes.
 
 [Compare v0.4.0...main](https://github.com/trinistr/playlistfs/compare/v0.4.0...main)
 

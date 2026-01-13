@@ -19,9 +19,11 @@
 #include "playlistfs.h"
 #include "files.h"
 
+#include <limits.h>
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/types.h>
 
 #if FUSE_USE_VERSION >= 30
 static void* pfs_init (struct fuse_conn_info *conn, struct fuse_config *cfg);
@@ -136,14 +138,17 @@ struct fuse_operations pfs_operations = {
 	#endif
 };
 
+static ino_t root_ino;
+
 #if FUSE_USE_VERSION < 30
 static void* pfs_init (struct fuse_conn_info *conn) {
 #else
 static void* pfs_init (struct fuse_conn_info *conn, struct fuse_config *cfg) {
-	// FUSE 2 uses options in argv for these for this, see playlistfs.c.
+	// FUSE 2 uses options in argv for these, see playlistfs.c.
 	cfg->attr_timeout = 0.0;
 	cfg->use_ino = 1;
 #endif
+	root_ino = pfs_file_next_ino ();
 	return fuse_get_context ()->private_data;
 }
 
@@ -152,9 +157,9 @@ static void pfs_destroy (void* private_data) {
 }
 
 static int pfs_statfs (const char* path, struct statvfs* statbuf) {
-	pfs_data* data = fuse_get_context ()->private_data;
-	statbuf->f_files = g_hash_table_size (data->filetable);
-	statbuf->f_ffree = 0;
+	fsfilcnt_t used = pfs_file_used_ino_count ();
+	statbuf->f_files = used;
+	statbuf->f_ffree = PFS_FILE_INO_MAX - PFS_FILE_INO_MIN - used;
 	statbuf->f_namemax = NAME_MAX;
 	return 0;
 }
@@ -170,7 +175,7 @@ static int pfs_getattr (const char* path, struct stat* statbuf, struct fuse_file
 	if (0 == strcmp (path, "/")) {
 		statbuf->st_mode = S_IFDIR | 0777;
 		statbuf->st_nlink = 2;
-		statbuf->st_ino = 1;
+		statbuf->st_ino = root_ino;
 		return 0;
 	}
 
@@ -218,7 +223,7 @@ static int pfs_unlink (const char* path) {
 	g_hash_table_steal (data->filetable, key);
 	free (key);
 	if (--file->nlink == 0) {
-		pfs_file_free(file);
+		pfs_file_free (file);
 	}
 	return 0;
 }
