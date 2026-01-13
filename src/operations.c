@@ -190,7 +190,7 @@ static int pfs_getattr (const char* path, struct stat* statbuf, struct fuse_file
 			return -errno;
 		if (data->opts.fuse.ro)
 			statbuf->st_mode &= ~0222;
-		if (data->opts.fuse.noexec)
+		if (data->opts.fuse.noexec && S_ISREG(statbuf->st_mode))
 			statbuf->st_mode &= ~0111;
 	}
 	else {
@@ -230,10 +230,11 @@ static int pfs_unlink (const char* path) {
 
 static int pfs_symlink (const char* path, const char* link) {
 	pfs_data* data = fuse_get_context ()->private_data;
-	if (g_hash_table_contains (data->filetable, link + 1)) {
+	if (g_hash_table_contains (data->filetable, link + 1))
 		return -EEXIST;
-	}
 	pfs_file* file = pfs_file_create (strdup(path), S_IFLNK|0777);
+	if (file == NULL)
+		return -ENOSPC;
 	g_hash_table_insert (data->filetable, strdup(link + 1), file);
 	return 0;
 }
