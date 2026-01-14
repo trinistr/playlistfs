@@ -1,6 +1,5 @@
 - --unmount/-u option (use fusermount -u / umount)
 - (?) redo --no-relative-* as positive options and flags
-- (?) add option to mount over non-empty directory (will always work in FUSE 3 anyway)
 - Add optional failures when something can't be accessed instead of skipping
 - (?) Impose (large) limits on paths to prevent runaway allocation
 - Don't use default_permissions, as it prohibits things like link(2) on files not owned by user

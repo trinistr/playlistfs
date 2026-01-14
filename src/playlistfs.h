@@ -56,6 +56,7 @@ typedef struct {
 		gboolean ro;
 		gboolean noexec;
 		gboolean noatime;
+		gboolean nonempty;
 		gboolean debug;
 	} fuse;
 } pfs_options;

@@ -8,6 +8,9 @@ Note that versions before 0.3.0 were bumped at pretty much random points in time
 
 ## [Next]
 
+**Added**
+- `--nonempty` option for FUSE 2, allowing mounting over a non-empty directory. With FUSE 3 this option is silently ignored, as this is always allowed.
+
 **Fixed**
 - Depending on locale, text in man page may have been broken. It is now always generated with `LC_ALL=C` to prevent that.
 

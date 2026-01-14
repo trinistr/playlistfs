@@ -468,6 +468,7 @@ static GOptionContext* pfs_setup_options (
 		{ "noexec", 0, G_OPTION_FLAG_NONE, G_OPTION_ARG_NONE, &data->opts.fuse.noexec, "Do not allow execution of files", NULL },
 		{ "noatime", 0, G_OPTION_FLAG_NONE, G_OPTION_ARG_NONE, &data->opts.fuse.noatime, "Do not update time of access", NULL },
 		{ "fsname", 0, G_OPTION_FLAG_NONE, G_OPTION_ARG_STRING, &data->opts.fuse.fsname, "Set filesystem name", "NAME" },
+		{ "nonempty", 0, G_OPTION_FLAG_NONE, G_OPTION_ARG_NONE, &data->opts.fuse.nonempty, "Allow mounts over non-empty targets (ignored on FUSE 3)", NULL },
 		{ "debug", 'd', G_OPTION_FLAG_NONE, G_OPTION_ARG_NONE, &data->opts.fuse.debug, "Enable debugging mode", NULL },
 		// { "fuse-help", 0, G_OPTION_FLAG_HIDDEN|G_OPTION_FLAG_NO_ARG, G_OPTION_ARG_CALLBACK, pfs_show_fuse_help_callback, NULL, NULL},
 		{}
@@ -635,7 +636,7 @@ static gboolean pfs_setup_fuse_arguments (
 
 	fuse_argv[fuse_argc] = pfs_setup_fuse_fsname(data);
 	printinfo ("Passing options to FUSE:");
-	printinfof ("  %s (filesystem name)", fuse_argv[fuse_argc]);
+	printinfof ("  %s (set filesystem name)", fuse_argv[fuse_argc]);
 	fuse_argc++;
 
 	fuse_argv[fuse_argc++] = "-odefault_permissions";
@@ -643,11 +644,11 @@ static gboolean pfs_setup_fuse_arguments (
 
 	if (data->opts.fuse.debug) {
 		fuse_argv[fuse_argc++] = "-d";
-		printinfo ("  -d (debug mode)");
+		printinfo ("  -d (enable foreground operation and debug output)");
 	}
 	if (data->opts.fuse.ro) {
 		fuse_argv[fuse_argc++] = "-r";
-		printinfo ("  -r (read-only mode)");
+		printinfo ("  -r (mount system read-only)");
 	}
 	if (data->opts.fuse.noatime) {
 		fuse_argv[fuse_argc++] = "-onoatime";
@@ -657,11 +658,18 @@ static gboolean pfs_setup_fuse_arguments (
 		fuse_argv[fuse_argc++] = "-onoexec";
 		printinfo ("  -onoexec (do not allow execution)");
 	}
+	// This is always on with FUSE 3, so no point in passing it.
+	#if FUSE_USE_VERSION < 30
+	if (data->opts.fuse.nonempty) {
+		fuse_argv[fuse_argc++] = "-ononempty";
+		printinfo ("  -ononempty (allow mounts over non-empty file/dir)");
+	}
+	#endif
 
 	// FUSE 3 has these in struct fuse_config, see operations.c.
 	#if FUSE_USE_VERSION < 30
-		fuse_argv[fuse_argc++] = "-oattr_timeout=0";
-		fuse_argv[fuse_argc++] = "-ouse_ino";
+	fuse_argv[fuse_argc++] = "-oattr_timeout=0";
+	fuse_argv[fuse_argc++] = "-ouse_ino";
 	#endif
 
 	*argc = fuse_argc;
