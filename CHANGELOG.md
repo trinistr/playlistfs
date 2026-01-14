@@ -12,15 +12,18 @@ Note that versions before 0.3.0 were bumped at pretty much random points in time
 - Persistent, unique inode numbers.
   - Each file added during initialization gets its own inode number.
   - `link`ed names will use the same inode number. Other software can detect this situtation now.
+- `--symlink`/`-s` option, similar to `--file`, allowing to add symlinks directly during start-up. However, there is no way to specify filename for the link, it will be derived from the path.
+  - `--symlink` and `--file` can mixed on command line, with last option winning in case of conflicts.
 
 **Changed**
 - Short form of `--symlinks` option was changed to `-S` (from `-s`).
-- Due to using inode numbers, rename(2) will no longer do anything when asked to rename file to itself, as it should.
-- `stat`ing the file system now reports semi-accurate inode numbers: not increasing on link(2), increasing on symlink(2), not decreasing on unlink(2). Additionally, file system will now report "free" inodes.
+- Format of output in `--verbose` mode to better highlight name overriding and symlinks and reduce empty space.
 
 **Fixed**
+- Due to using inode numbers, rename(2) will no longer do anything when asked to rename file to itself, as it should.
+- `stat`ing the file system now reports semi-accurate inode numbers: not increasing on link(2), increasing on symlink(2), not decreasing on unlink(2). Additionally, file system will now report "free" inodes.
 - Symlinks can now be included the same as regular files. However, relative symlinks remain relative, so they probably won't resolve unless made intentionally for this.
-- Internally created symlinks (through `--symlinks` option or symlink(2) call) now report correct time of creation as atime/mtime/ctime. Birth time is not supported by FUSE.
+- Internally created symlinks (not external symlinks included as files) now report correct time of creation as atime/mtime/ctime. Birth time is not supported by FUSE.
 
 [Compare v0.4.0...main](https://github.com/trinistr/playlistfs/compare/v0.4.0...main)
 

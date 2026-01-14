@@ -134,25 +134,26 @@ When using command line, it is possible to specify files to mount in several
 ways. The user can specify several playlists and individual files to include
 in the mounted file system. When encountering several paths with the same
 basename, later paths take precedence, and individual files take precedence
-over files in playlists. It is not possible to add directories.
+over files in playlists. It is not possible to add directories,
+except as symlinks.
 
 Example of command line use:
 ```sh
-playlistfs -f ~/keyboard -f /etc/mtab example.playlist ~/mount_point
+playlistfs lists/example.playlist --file ~/keyboard --symlink /etc/mtab --file program ~/mount_point
 ```
 
 This will mount a directory at `~/mount_point` with following files:
-- file1 → documents/file1
-- keyboard → ~/keyboard
-- mtab → /etc/mtab
-- program → ../bin/program
+- **file1** : *\<current directory\>*/lists/documents/file1
+- **keyboard** : /home/*\<user\>*/keyboard
+- **mtab** → /etc/mtab *(a symbolic link)*
+- **program** : *\<current directory\>*/program
 
 By default, files are presented as regular files to make copying in file
-managers easier. Supplying `--symlinks`/`-s` options changes them to symlinks.
+managers easier. Supplying `--symlinks`/`-S` option presents all files as symbolic links.
 
 Unmounting can be done with `fusermount` program, which is provided by FUSE, or `umount`:
 ```sh
-fusermount -u ~/mount_point
+fusermount3 -u ~/mount_point
 # or
 umount ~/mount_point
 ```
@@ -161,17 +162,23 @@ umount ~/mount_point
 
 PlaylistFS comes with `text/x-playlistfs-playlist` MIME type.
 It is defined by `*.playlist` glob.
-Corresponding definition is installed by `make install-mime`.
-`make install-mime-default` will also register the provided handler as default.
+Corresponding definition is installed by `make install-supplementary`.
+`make install-set-default` will also register the provided handler as default.
 
 If a default handler is registered, it is possible to automatically mount and
 unmount playlists. This is done by 'opening' **.playlist** files in file manager.
 Provided handler script will create an empty directory, with name formed by
-removing **.playlist** extension from the file and adding "playlist",
+removing **.playlist** extension from the file and adding " playlist",
 and mount this playlist there.
 If the directory already exists, it will be unmounted and deleted instead.
 Note that a non-empty directory will not be removed if it happens to be
 named like the playlist, and the automatic mounting will not work.
+
+### After mounting
+
+PlaylistFS does not allow creating any new files or directories. However, symbolic links *can* be created, as they follow the same semantics.
+
+Additionally, new hard links can be created (see `ln`) and files can be deleted.
 
 ## License
 

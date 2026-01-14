@@ -33,8 +33,13 @@
 #include <time.h>
 
 typedef struct {
-	char** files;
+	char* path;
+	mode_t type;
+} pfs_file_entry;
+
+typedef struct {
 	char** lists;
+	GArray* files;
 	char* mount_point;
 	struct timespec started_at;
 	gboolean symlinks;

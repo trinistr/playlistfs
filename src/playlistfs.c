@@ -52,7 +52,7 @@ extern struct fuse_operations pfs_operations;
 #define printinfof(x, ...) {if(data->opts.verbose) fprintf(stderr, x "\n", __VA_ARGS__);}
 
 static gboolean pfs_parse_options (
-	pfs_options* opts, int argc, char* argv[]
+	pfs_data* data, int argc, char* argv[]
 );
 static gboolean pfs_check_mount_point (
 	pfs_data* data
@@ -73,7 +73,7 @@ int main (int argc, char* argv[]) {
 		exit (EXIT_FAILURE);
 	}
 
-	if (!pfs_parse_options (&data->opts, argc, argv)) {
+	if (!pfs_parse_options (data, argc, argv)) {
 		exit (EXIT_FAILURE);
 	}
 	if (!pfs_check_mount_point (data)) {
@@ -102,7 +102,7 @@ int main (int argc, char* argv[]) {
 
 void pfs_free_pfs_data (pfs_data* data) {
 	if (data->opts.files != NULL)
-		g_strfreev (data->opts.files);
+		g_array_free (data->opts.files, TRUE);
 	if (data->opts.lists != NULL)
 		free (data->opts.lists);
 	if (data->opts.fuse.fsname != NULL)
@@ -125,7 +125,13 @@ static gboolean pfs_build_playlist_process_list (
 	pfs_data* data, GHashTable* filetable, GString* cwd, char* listpath
 );
 static gboolean pfs_build_playlist_process_path (
-	pfs_data* data, GHashTable* filetable, GString* relative_base, char* path
+	pfs_data* data, GHashTable* filetable, GString* relative_base, pfs_file_entry* entry
+);
+static gboolean pfs_build_playlist_add_symlink (
+	pfs_data* data, GHashTable* filetable, GString* relative_base, pfs_file_entry* entry
+);
+static gboolean pfs_build_playlist_add_regular (
+	pfs_data* data, GHashTable* filetable, GString* relative_base, pfs_file_entry* entry
 );
 static char* pfs_build_playlist_get_full_path (
 	pfs_data* data, GString* relative_base, char* path
@@ -141,7 +147,7 @@ static gboolean pfs_build_playlist (
 	pfs_data* data
 ) {
 	char** lists = data->opts.lists;
-	char** files = data->opts.files;
+	GArray* files = data->opts.files;
 	GHashTable* table = data->filetable;
 
 	GString* cwd = pfs_build_playlist_get_cwd(data);
@@ -151,7 +157,7 @@ static gboolean pfs_build_playlist (
 
 	if (lists != NULL) {
 		for (size_t ilist = 0; lists[ilist]; ilist++) {
-			if (!pfs_build_playlist_process_list(data, table, cwd, lists[ilist])) {
+			if (!pfs_build_playlist_process_list (data, table, cwd, lists[ilist])) {
 				return FALSE;
 			}
 		}
@@ -159,12 +165,13 @@ static gboolean pfs_build_playlist (
 
 	if (files != NULL) {
 		GString* files_relative_base = NULL;
+		pfs_file_entry* entry = NULL;
 		if (!data->opts.relative_disabled.files) {
 			files_relative_base = cwd;
 		}
 		printinfo ("Adding individual files:");
-		for (size_t ifile = 0; files[ifile]; ifile++) {
-			if (!pfs_build_playlist_process_path(data, table, files_relative_base, files[ifile])) {
+		for (size_t ifile = 0; (entry = &g_array_index (files, pfs_file_entry, ifile)), ifile < files->len; ifile++) {
+			if (!pfs_build_playlist_process_path (data, table, files_relative_base, entry)) {
 				return FALSE;
 			}
 		}
@@ -242,6 +249,7 @@ static gboolean pfs_build_playlist_process_list (
 	char path[PATH_MAX];
 	while (fgets (path, PATH_MAX, list)) {
 		size_t length = strlen (path);
+		pfs_file_entry entry = { .path = path, .type = S_IFREG };
 		if (path[0] == '\n' || length == 0) {
 			continue;
 		}
@@ -254,7 +262,7 @@ static gboolean pfs_build_playlist_process_list (
 			continue;
 		}
 
-		pfs_build_playlist_process_path(data, filetable, relative_base, path);
+		pfs_build_playlist_process_path (data, filetable, relative_base, &entry);
 	}
 
 	if (feof (list)) {
@@ -272,8 +280,52 @@ static gboolean pfs_build_playlist_process_list (
 }
 
 static gboolean pfs_build_playlist_process_path (
-	pfs_data* data, GHashTable* filetable, GString* relative_base, char* path
+	pfs_data* data, GHashTable* filetable, GString* relative_base, pfs_file_entry* entry
 ) {
+	mode_t type = entry->type;
+
+	if (S_ISLNK(type)) {
+		return pfs_build_playlist_add_symlink(data, filetable, relative_base, entry);
+	}
+	
+	return pfs_build_playlist_add_regular(data, filetable, relative_base, entry);
+}
+
+static gboolean pfs_build_playlist_add_symlink (
+	pfs_data* data, GHashTable* filetable, GString* relative_base, pfs_file_entry* entry
+) {
+	char* path = entry->path;
+	// name is used as the key, do not free it here!
+	char* name = pfs_basename (path);
+	if (!name) {
+		printerr ("memory allocation failed");
+		return FALSE;
+	}
+	if (strlen (name) <= NAME_MAX) {
+		pfs_file* file = pfs_file_create (path, S_IFLNK, &data->opts.started_at);
+		if (!file) {
+			printerr ("memory allocation failed");
+			return FALSE;
+		}
+		
+		printinfof("  %s -> %s", name, path);
+		// Replace in case we encountered the name already.
+		if (!g_hash_table_replace (filetable, name, file)) {
+			printinfof ("    Replaced previous definition of '%s'", name);
+		}
+	}
+	else {
+		printwarnf ("filename '%s' is too long, ignoring", name);
+		free (name);
+	}
+
+	return TRUE;
+}
+
+static gboolean pfs_build_playlist_add_regular (
+	pfs_data* data, GHashTable* filetable, GString* relative_base, pfs_file_entry* entry
+) {
+	char* path = entry->path;
 	char* full_path = pfs_build_playlist_get_full_path(data, relative_base, path);
 	if (full_path == NULL) {
 		// Something happened, warning was already printed, skip file. 
@@ -288,6 +340,7 @@ static gboolean pfs_build_playlist_process_path (
 		printwarnf ("file '%s' is a directory, ignoring", path);
 	}
 	else {
+		// name is used as the key, do not free it here!
 		char* name = pfs_basename (path);
 		if (!name) {
 			printerr ("memory allocation failed");
@@ -302,8 +355,11 @@ static gboolean pfs_build_playlist_process_path (
 				return FALSE;
 			}
 			
+			printinfof("  %s : %s", name, full_path);
 			// Replace in case we encountered the name already.
-			g_hash_table_replace (filetable, name, file);
+			if (!g_hash_table_replace (filetable, name, file)) {
+				printinfof ("    Replaced previous definition of '%s'", name);
+			}
 		}
 		else {
 			printwarnf ("filename '%s' is too long, ignoring", name);
@@ -338,7 +394,6 @@ static char* pfs_build_playlist_get_full_path_from_absolute (
 	// Absolute paths are already complete, no additional processing needed.
 	// We could call realpath(), but it can fail for overly long paths.
 	// In this case, we trust that the user knows what they are doing.
-	printinfof ("\t%s", path);
 	return strdup (path);
 }
 
@@ -362,7 +417,6 @@ static char* pfs_build_playlist_get_full_path_from_relative (
 		}
 		strcpy (full_path, relative_base->str);
 		strcpy (full_path + relative_base->len, path);
-		printinfof("\t%s -> %s", path, full_path);
 	}
 	return full_path;
 }
@@ -371,15 +425,22 @@ static char* pfs_build_playlist_get_full_path_from_relative (
 ---- Option parsing ----
 */
 
-static gboolean pfs_no_relative_option_callback (
-	const char* option_name, const char* value, gpointer data, GError** error
+static gboolean pfs_option_callback_add_file (
+	const char* option_name, const char* value, gpointer gdata, GError** error
 );
-static gboolean pfs_relative_option_callback (
-	const char* option_name, const char* value, gpointer data, GError** error
+static gboolean pfs_option_callback_add_symlink (
+	const char* option_name, const char* value, gpointer gdata, GError** error
+);
+
+static gboolean pfs_option_callback_no_relative (
+	const char* option_name, const char* value, gpointer gdata, GError** error
+);
+static gboolean pfs_option_callback_relative (
+	const char* option_name, const char* value, gpointer gdata, GError** error
 );
 
 // static gboolean pfs_show_fuse_help_callback (
-// 	const char* option_name, const char* value, gpointer data, GError** error
+// 	const char* option_name, const char* value, gpointer gdata, GError** error
 // ) {
 // 	*error = NULL;
 // 	char* argv[] = {"", "--help", NULL};
@@ -388,7 +449,7 @@ static gboolean pfs_relative_option_callback (
 // }
 
 static GOptionContext* pfs_setup_options (
-	pfs_options* opts
+	pfs_data* data
 ) {
 	GOptionContext* optionContext = g_option_context_new ("[LIST...] [MOUNT_DIR]");
 	if (optionContext == NULL) {
@@ -402,21 +463,22 @@ static GOptionContext* pfs_setup_options (
 	g_option_context_set_help_enabled (optionContext, TRUE);
 
 	GOptionGroup* mainGroup = g_option_group_new (
-		NULL, NULL, NULL, opts, NULL
+		NULL, NULL, NULL, data, NULL
 	);
 	GOptionEntry options[] = {
-		{ "target", 't', G_OPTION_FLAG_NONE, G_OPTION_ARG_FILENAME, &opts->mount_point, "Set mount point explicitly", "MOUNT_DIR"},
-		{ "file", 'f', G_OPTION_FLAG_NONE, G_OPTION_ARG_FILENAME_ARRAY, &opts->files, "Add a single file, overriding any lists", "FILE"},
-		{ "symlinks", 'S', G_OPTION_FLAG_NONE, G_OPTION_ARG_NONE, &opts->symlinks, "Display all files as symlinks to originals", NULL},
-		{ "no-relative", 'N', G_OPTION_FLAG_NO_ARG, G_OPTION_ARG_CALLBACK, pfs_no_relative_option_callback, "Combine --no-relative-files and --no-relative-paths", NULL},
-		{ "relative", 0, G_OPTION_FLAG_NO_ARG, G_OPTION_ARG_CALLBACK, pfs_relative_option_callback, "Enable all relative path handling", NULL},
-		{ "no-relative-files", 0, G_OPTION_FLAG_NONE, G_OPTION_ARG_NONE, &opts->relative_disabled.files, "Disable relative path handling for files added with --file", NULL},
-		{ "relative-files", 0, G_OPTION_FLAG_REVERSE, G_OPTION_ARG_NONE, &opts->relative_disabled.files, "Reverse effect of --no-relative-files", NULL},
-		{ "no-relative-paths", 0, G_OPTION_FLAG_NONE, G_OPTION_ARG_NONE, &opts->relative_disabled.paths, "Disable relative path handling in LISTs", NULL},
-		{ "relative-paths", 0, G_OPTION_FLAG_REVERSE, G_OPTION_ARG_NONE, &opts->relative_disabled.paths, "Reverse effect of --no-relative-paths", NULL},
-		{ "verbose", 'v', G_OPTION_FLAG_NONE, G_OPTION_ARG_NONE, &opts->verbose, "Describe what is happening", NULL},
-		{ "quiet", 'q', G_OPTION_FLAG_NONE, G_OPTION_ARG_NONE, &opts->quiet, "Suppress warnings", NULL},
-		{ "version", 'V', G_OPTION_FLAG_NONE, G_OPTION_ARG_NONE, &opts->show_version, "Display version information", NULL},
+		{ "target", 't', G_OPTION_FLAG_NONE, G_OPTION_ARG_FILENAME, &data->opts.mount_point, "Set mount point explicitly", "MOUNT_DIR" },
+		{ "file", 'f', G_OPTION_FLAG_FILENAME, G_OPTION_ARG_CALLBACK, pfs_option_callback_add_file, "Add a single FILE, overriding any lists", "FILE" },
+		{ "symlink", 's', G_OPTION_FLAG_FILENAME, G_OPTION_ARG_CALLBACK, pfs_option_callback_add_symlink, "Add a single symlink to FILE, overriding any lists", "FILE" },
+		{ "symlinks", 'S', G_OPTION_FLAG_NONE, G_OPTION_ARG_NONE, &data->opts.symlinks, "Display all files as symlinks to originals", NULL },
+		{ "no-relative", 'N', G_OPTION_FLAG_NO_ARG, G_OPTION_ARG_CALLBACK, pfs_option_callback_no_relative, "Combine --no-relative-files and --no-relative-paths", NULL },
+		{ "relative", 0, G_OPTION_FLAG_NO_ARG, G_OPTION_ARG_CALLBACK, pfs_option_callback_relative, "Enable all relative path handling", NULL },
+		{ "no-relative-files", 0, G_OPTION_FLAG_NONE, G_OPTION_ARG_NONE, &data->opts.relative_disabled.files, "Disable relative path handling for files added with --file", NULL },
+		{ "relative-files", 0, G_OPTION_FLAG_REVERSE, G_OPTION_ARG_NONE, &data->opts.relative_disabled.files, "Reverse effect of --no-relative-files", NULL },
+		{ "no-relative-paths", 0, G_OPTION_FLAG_NONE, G_OPTION_ARG_NONE, &data->opts.relative_disabled.paths, "Disable relative path handling in LISTs", NULL },
+		{ "relative-paths", 0, G_OPTION_FLAG_REVERSE, G_OPTION_ARG_NONE, &data->opts.relative_disabled.paths, "Reverse effect of --no-relative-paths", NULL },
+		{ "verbose", 'v', G_OPTION_FLAG_NONE, G_OPTION_ARG_NONE, &data->opts.verbose, "Describe what is happening", NULL },
+		{ "quiet", 'q', G_OPTION_FLAG_NONE, G_OPTION_ARG_NONE, &data->opts.quiet, "Suppress warnings", NULL },
+		{ "version", 'V', G_OPTION_FLAG_NONE, G_OPTION_ARG_NONE, &data->opts.show_version, "Display version information", NULL },
 		{}
 	};
 	g_option_group_add_entries (mainGroup, options);
@@ -426,11 +488,11 @@ static GOptionContext* pfs_setup_options (
 		"fuse", "Options passed to FUSE:", "Show FUSE options", NULL, NULL
 	);
 	GOptionEntry optionsFuse[] = {
-		{ "read-only", 'r', G_OPTION_FLAG_NONE, G_OPTION_ARG_NONE, &opts->fuse.ro, "Mount file system as read-only", NULL},
-		{ "noexec", 0, G_OPTION_FLAG_NONE, G_OPTION_ARG_NONE, &opts->fuse.noexec, "Do not allow execution of files", NULL},
-		{ "noatime", 0, G_OPTION_FLAG_NONE, G_OPTION_ARG_NONE, &opts->fuse.noatime, "Do not update time of access", NULL},
-		{ "fsname", 0, G_OPTION_FLAG_NONE, G_OPTION_ARG_STRING, &opts->fuse.fsname, "Set filesystem name", "NAME"},
-		{ "debug", 'd', G_OPTION_FLAG_NONE, G_OPTION_ARG_NONE, &opts->fuse.debug, "Enable debugging mode", NULL},
+		{ "read-only", 'r', G_OPTION_FLAG_NONE, G_OPTION_ARG_NONE, &data->opts.fuse.ro, "Mount file system as read-only", NULL },
+		{ "noexec", 0, G_OPTION_FLAG_NONE, G_OPTION_ARG_NONE, &data->opts.fuse.noexec, "Do not allow execution of files", NULL },
+		{ "noatime", 0, G_OPTION_FLAG_NONE, G_OPTION_ARG_NONE, &data->opts.fuse.noatime, "Do not update time of access", NULL },
+		{ "fsname", 0, G_OPTION_FLAG_NONE, G_OPTION_ARG_STRING, &data->opts.fuse.fsname, "Set filesystem name", "NAME" },
+		{ "debug", 'd', G_OPTION_FLAG_NONE, G_OPTION_ARG_NONE, &data->opts.fuse.debug, "Enable debugging mode", NULL },
 		// { "fuse-help", 0, G_OPTION_FLAG_HIDDEN|G_OPTION_FLAG_NO_ARG, G_OPTION_ARG_CALLBACK, pfs_show_fuse_help_callback, NULL, NULL},
 		{}
 	};
@@ -441,9 +503,9 @@ static GOptionContext* pfs_setup_options (
 }
 
 static gboolean pfs_parse_options (
-	pfs_options* opts, int argc, char* argv[]
+	pfs_data* data, int argc, char* argv[]
 ) {
-	GOptionContext* optionContext = pfs_setup_options (opts);
+	GOptionContext* optionContext = pfs_setup_options (data);
 	if (optionContext == NULL) {
 		return FALSE;
 	}
@@ -457,69 +519,106 @@ static gboolean pfs_parse_options (
 	g_option_context_free (optionContext);
 	optionContext = NULL;
 
-	if (opts->show_version) {
+	if (data->opts.show_version) {
 		puts (
 			"PlaylistFS " PLAYLISTFS_VERSION PLAYLISTFS_METADATA "\n"
 			"Copyright (C) 2018-2026 Alexander Bulancov\n"
 			"This is free software; see the source for copying conditions.\n"
 			"There is NO warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE."
 		);
-		if (argc == 1 && opts->files == NULL) {
+		if (argc == 1 && data->opts.files == NULL) {
 			exit (0);
 		}
 	}
 
-	if (!opts->relative_disabled.files || !opts->relative_disabled.paths) {
-		opts->relative_disabled.all = FALSE;
+	if (!data->opts.relative_disabled.files || !data->opts.relative_disabled.paths) {
+		data->opts.relative_disabled.all = FALSE;
 	}
 	else {
-		opts->relative_disabled.all = TRUE;
+		data->opts.relative_disabled.all = TRUE;
 	}
 
-	if (opts->mount_point == NULL) {
+	if (data->opts.mount_point == NULL) {
 		if (argc == 1) {
 			printerr ("no target mount point");
 			return FALSE;
 		}
-		opts->mount_point = g_malloc (sizeof (*opts->mount_point) * (strlen(argv[--argc]) + 1));
-		strcpy (opts->mount_point, argv[argc]);
+		data->opts.mount_point = g_malloc (sizeof (*data->opts.mount_point) * (strlen(argv[--argc]) + 1));
+		strcpy (data->opts.mount_point, argv[argc]);
 	}
 
-	opts->lists = malloc (sizeof (*opts->lists) * argc);
-	if (!opts->lists) {
+	data->opts.lists = malloc (sizeof (*data->opts.lists) * argc);
+	if (!data->opts.lists) {
 		printerr ("memory allocation failed");
 		return FALSE;
 	}
 	for (int i = 1; i < argc; i++) {
-		opts->lists[i - 1] = argv[i];
+		data->opts.lists[i - 1] = argv[i];
 	}
-	opts->lists[argc - 1] = NULL;
+	data->opts.lists[argc - 1] = NULL;
 
 	return TRUE;
 }
 
-static gboolean pfs_no_relative_option_callback (
-	const char* option_name, const char* value, gpointer data, GError** error
+// Individual file entry callbacks
+
+void pfs_option_clear_file_entry (void* pointer) {
+	pfs_file_entry* entry = (pfs_file_entry*) pointer;
+	g_clear_pointer (&entry->path, g_free);
+	entry->type = 0;
+}
+
+static gboolean pfs_option_callback_add_entry (
+	const char* option_name, const char* value, gpointer gdata, GError** error, mode_t type
 ) {
 	*error = NULL;
 
-	pfs_options* opts = (pfs_options*) data;
-	opts->relative_disabled.all = TRUE;
-	opts->relative_disabled.files = TRUE;
-	opts->relative_disabled.paths = TRUE;
+	pfs_data* data = (pfs_data*) gdata;
+	if (data->opts.files == NULL) {
+		data->opts.files = g_array_new (TRUE, FALSE, sizeof (pfs_file_entry));
+		g_array_set_clear_func (data->opts.files, pfs_option_clear_file_entry);
+	}
+
+	pfs_file_entry entry = { .path = strdup (value), .type = type };
+	g_array_append_vals (data->opts.files, &entry, 1);
+	return TRUE;
+}
+
+static gboolean pfs_option_callback_add_file (
+	const char* option_name, const char* value, gpointer gdata, GError** error
+) {
+	return pfs_option_callback_add_entry(option_name, value, gdata, error, S_IFREG);
+}
+static gboolean pfs_option_callback_add_symlink (
+	const char* option_name, const char* value, gpointer gdata, GError** error
+) {
+	return pfs_option_callback_add_entry(option_name, value, gdata, error, S_IFLNK);
+}
+
+// --relative and --no-relative callbacks
+
+static gboolean pfs_option_callback_no_relative (
+	const char* option_name, const char* value, gpointer gdata, GError** error
+) {
+	*error = NULL;
+
+	pfs_data* data = (pfs_data*) gdata;
+	data->opts.relative_disabled.all = TRUE;
+	data->opts.relative_disabled.files = TRUE;
+	data->opts.relative_disabled.paths = TRUE;
 
 	return TRUE;
 }
 
-static gboolean pfs_relative_option_callback (
-	const char* option_name, const char* value, gpointer data, GError** error
+static gboolean pfs_option_callback_relative (
+	const char* option_name, const char* value, gpointer gdata, GError** error
 ) {
 	*error = NULL;
 
-	pfs_options* opts = (pfs_options*) data;
-	opts->relative_disabled.all = FALSE;
-	opts->relative_disabled.files = FALSE;
-	opts->relative_disabled.paths = FALSE;
+	pfs_data* data = (pfs_data*) gdata;
+	data->opts.relative_disabled.all = FALSE;
+	data->opts.relative_disabled.files = FALSE;
+	data->opts.relative_disabled.paths = FALSE;
 
 	return TRUE;
 }
@@ -577,24 +676,24 @@ static gboolean pfs_setup_fuse_arguments (
 		return FALSE;
 	}
 	printinfo ("Passing options to FUSE:");
-	printinfof ("\t%s (filesystem name)", fuse_argv[fuse_argc]);
+	printinfof ("  %s (filesystem name)", fuse_argv[fuse_argc]);
 	fuse_argc++;
 
 	if (data->opts.fuse.debug) {
 		fuse_argv[fuse_argc++] = "-d";
-		printinfo ("\t-d (debug mode)");
+		printinfo ("  -d (debug mode)");
 	}
 	if (data->opts.fuse.ro) {
 		fuse_argv[fuse_argc++] = "-r";
-		printinfo ("\t-r (read-only mode)");
+		printinfo ("  -r (read-only mode)");
 	}
 	if (data->opts.fuse.noatime) {
 		fuse_argv[fuse_argc++] = "-onoatime";
-		printinfo ("\t-onoatime (do not update access time)");
+		printinfo ("  -onoatime (do not update access time)");
 	}
 	if (data->opts.fuse.noexec) {
 		fuse_argv[fuse_argc++] = "-onoexec";
-		printinfo ("\t-onoexec (do not allow execution)");
+		printinfo ("  -onoexec (do not allow execution)");
 	}
 
 	// FUSE 3 has these in struct fuse_config, see operations.c.

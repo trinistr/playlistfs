@@ -13,4 +13,4 @@
   - Add file name mapping
 - Add final list of files in a hidden file inside directory
   - Use it for magic too!
-- Add --symlink option for adding symlinks to files
+- Make --symlinks actually behave the same as --symlink
