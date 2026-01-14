@@ -18,10 +18,8 @@
 
 #include "pfs_libgen.h"
 
-#define _XOPEN_SOURCE 700 // strdup()
-
+#include <glib.h>
 #include <stddef.h>
-#include <stdlib.h>
 #include <string.h>
 
 /*
@@ -48,18 +46,15 @@ char* pfs_dirname (const char* path) {
     ptrdiff_t pos = last_slash_pos (path);
     char* name;
     if (pos > 0) {
-        name = malloc (sizeof (*name) * (pos + 1));
-        if (name == NULL) {
-            return NULL;
-        }
+        name = g_malloc (sizeof (*name) * (pos + 1));
         strncpy (name, path, pos);
         name[pos] = '\0';
     }
     else if (pos < 0) {
-        name = strdup (".");
+        name = g_strdup (".");
     }
     else {
-        name = strdup("/");
+        name = g_strdup("/");
     }
     return name;
 }
@@ -73,14 +68,14 @@ char* pfs_basename (const char* path) {
     char* name;
     if (pos >= 0) {
         if (path[pos + 1] != '\0') {
-            name = strdup (path + pos + 1);
+            name = g_strdup (path + pos + 1);
         }
         else {
-            name = strdup("");
+            name = g_strdup("");
         }
     }
     else {
-        name = strdup (path);
+        name = g_strdup (path);
     }
     return name;
 }

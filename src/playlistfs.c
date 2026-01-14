@@ -67,11 +67,7 @@ static gboolean pfs_setup_fuse_arguments (
 int main (int argc, char* argv[]) {
 	setlocale(LC_ALL, "");
 
-	pfs_data* data = calloc (1, sizeof (*data));
-	if (!data) {
-		printerr ("memory allocation failed");
-		exit (EXIT_FAILURE);
-	}
+	pfs_data* data = g_malloc0 (sizeof (*data));
 
 	if (!pfs_parse_options (data, argc, argv)) {
 		exit (EXIT_FAILURE);
@@ -84,7 +80,7 @@ int main (int argc, char* argv[]) {
 	fflush(stderr);
 
 	clock_gettime(CLOCK_REALTIME, &data->opts.started_at);
-	data->filetable = g_hash_table_new_full (g_str_hash, g_str_equal, free, pfs_file_free_void);
+	data->filetable = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, pfs_file_free_void);
 	if (!pfs_build_playlist (data)) {
 		exit (EXIT_FAILURE);
 	}
@@ -104,14 +100,14 @@ void pfs_free_pfs_data (pfs_data* data) {
 	if (data->opts.files != NULL)
 		g_array_free (data->opts.files, TRUE);
 	if (data->opts.lists != NULL)
-		free (data->opts.lists);
+		g_free (data->opts.lists);
 	if (data->opts.fuse.fsname != NULL)
-		free (data->opts.fuse.fsname);
+		g_free (data->opts.fuse.fsname);
 	if (data->opts.mount_point != NULL)
 		g_free (data->opts.mount_point);
 	if (data->filetable != NULL)
 		g_hash_table_unref (data->filetable);
-	free (data);
+	g_free (data);
 }
 
 /*
@@ -201,10 +197,6 @@ static GString* pfs_build_playlist_get_cwd (
 	}
 
 	GString* cwd = g_string_new(string_cwd);
-	if (!cwd) {
-		printerr ("memory allocation failed");
-		return NULL;
-	}
 	if (cwd->str[cwd->len - 1] != '/') {
 		g_string_append_c(cwd, '/');
 	}
@@ -242,7 +234,7 @@ static gboolean pfs_build_playlist_process_list (
 			else {
 				printwarnf ("relative paths will be ignored for list '%s'", listpath);
 			}
-			free (dirpath);
+			g_free (dirpath);
 		}
 	}
 
@@ -297,14 +289,10 @@ static gboolean pfs_build_playlist_add_symlink (
 	char* path = entry->path;
 	// name is used as the key, do not free it here!
 	char* name = pfs_basename (path);
-	if (!name) {
-		printerr ("memory allocation failed");
-		return FALSE;
-	}
 	if (strlen (name) <= NAME_MAX) {
 		pfs_file* file = pfs_file_create (path, S_IFLNK, &data->opts.started_at);
 		if (!file) {
-			printerr ("memory allocation failed");
+			printerr ("could not create new file");
 			return FALSE;
 		}
 		
@@ -316,7 +304,7 @@ static gboolean pfs_build_playlist_add_symlink (
 	}
 	else {
 		printwarnf ("filename '%s' is too long, ignoring", name);
-		free (name);
+		g_free (name);
 	}
 
 	return TRUE;
@@ -342,16 +330,12 @@ static gboolean pfs_build_playlist_add_regular (
 	else {
 		// name is used as the key, do not free it here!
 		char* name = pfs_basename (path);
-		if (!name) {
-			printerr ("memory allocation failed");
-			return FALSE;
-		}
 		if (strlen (name) <= NAME_MAX) {
 			// Set type to symlink/regular based on what we need, not what the file is.
 			mode_t type = !data->opts.symlinks ? S_IFREG : S_IFLNK;
 			pfs_file* file = pfs_file_create (full_path, type, &data->opts.started_at);
 			if (!file) {
-				printerr ("memory allocation failed");
+				printerr ("could not create new file");
 				return FALSE;
 			}
 			
@@ -363,10 +347,10 @@ static gboolean pfs_build_playlist_add_regular (
 		}
 		else {
 			printwarnf ("filename '%s' is too long, ignoring", name);
-			free (name);
+			g_free (name);
 		}
 	}
-	free (full_path);
+	g_free (full_path);
 
 	return TRUE;
 }
@@ -394,7 +378,7 @@ static char* pfs_build_playlist_get_full_path_from_absolute (
 	// Absolute paths are already complete, no additional processing needed.
 	// We could call realpath(), but it can fail for overly long paths.
 	// In this case, we trust that the user knows what they are doing.
-	return strdup (path);
+	return g_strdup (path);
 }
 
 static char* pfs_build_playlist_get_full_path_from_relative (
@@ -410,11 +394,7 @@ static char* pfs_build_playlist_get_full_path_from_relative (
 		printwarn ("filename too long, ignoring");
 	}
 	else {
-		full_path = malloc (sizeof (*full_path) * (relative_base->len + length + 1));
-		if (!full_path) {
-			printerr ("memory allocation failed");
-			return NULL;
-		}
+		full_path = g_malloc (sizeof (*full_path) * (relative_base->len + length + 1));
 		strcpy (full_path, relative_base->str);
 		strcpy (full_path + relative_base->len, path);
 	}
@@ -452,10 +432,6 @@ static GOptionContext* pfs_setup_options (
 	pfs_data* data
 ) {
 	GOptionContext* optionContext = g_option_context_new ("[LIST...] [MOUNT_DIR]");
-	if (optionContext == NULL) {
-		printerr ("memory allocation failed");
-		return NULL;
-	}
 
 	g_option_context_set_summary (
 		optionContext, "PlaylistFS mounts a FUSE filesystem with files taken from user-supplied list(s) or specified on command line."
@@ -506,9 +482,6 @@ static gboolean pfs_parse_options (
 	pfs_data* data, int argc, char* argv[]
 ) {
 	GOptionContext* optionContext = pfs_setup_options (data);
-	if (optionContext == NULL) {
-		return FALSE;
-	}
 
 	GError* optionError = NULL;
 	if (!g_option_context_parse (optionContext, &argc, &argv, &optionError)) {
@@ -547,11 +520,7 @@ static gboolean pfs_parse_options (
 		strcpy (data->opts.mount_point, argv[argc]);
 	}
 
-	data->opts.lists = malloc (sizeof (*data->opts.lists) * argc);
-	if (!data->opts.lists) {
-		printerr ("memory allocation failed");
-		return FALSE;
-	}
+	data->opts.lists = g_new (char*, argc);
 	for (int i = 1; i < argc; i++) {
 		data->opts.lists[i - 1] = argv[i];
 	}
@@ -579,7 +548,7 @@ static gboolean pfs_option_callback_add_entry (
 		g_array_set_clear_func (data->opts.files, pfs_option_clear_file_entry);
 	}
 
-	pfs_file_entry entry = { .path = strdup (value), .type = type };
+	pfs_file_entry entry = { .path = g_strdup (value), .type = type };
 	g_array_append_vals (data->opts.files, &entry, 1);
 	return TRUE;
 }
@@ -651,33 +620,26 @@ static gboolean pfs_check_mount_point (
 /*
 ---- Arguments to FUSE ----
 */
-static gboolean pfs_setup_fuse_fsname (
-	char** fuse_fsname, pfs_data* data
+static char* pfs_setup_fuse_fsname (
+	pfs_data* data
 );
 
 static gboolean pfs_setup_fuse_arguments (
 	int* argc, char** argv[], char* pfs_name, pfs_data* data
 ) {
 	int fuse_argc = 0;
-	char** fuse_argv = malloc (sizeof (*fuse_argv) * 16);
-	if(!fuse_argv) {
-		printerr ("memory allocation failed");
-		return FALSE;
-	}
+	char** fuse_argv = g_new (char*, 16);
 
 	fuse_argv[fuse_argc++] = pfs_name;
 	fuse_argv[fuse_argc++] = data->opts.mount_point;
-	fuse_argv[fuse_argc++] = "-odefault_permissions";
-	fuse_argv[fuse_argc++] = "-osubtype=playlistfs";
 
-	if (!pfs_setup_fuse_fsname(&fuse_argv[fuse_argc], data)) {
-		printerr ("memory allocation failed");
-		free (fuse_argv);
-		return FALSE;
-	}
+	fuse_argv[fuse_argc] = pfs_setup_fuse_fsname(data);
 	printinfo ("Passing options to FUSE:");
 	printinfof ("  %s (filesystem name)", fuse_argv[fuse_argc]);
 	fuse_argc++;
+
+	fuse_argv[fuse_argc++] = "-odefault_permissions";
+	fuse_argv[fuse_argc++] = "-osubtype=playlistfs";
 
 	if (data->opts.fuse.debug) {
 		fuse_argv[fuse_argc++] = "-d";
@@ -707,32 +669,25 @@ static gboolean pfs_setup_fuse_arguments (
 	return TRUE;
 }
 
-static gboolean pfs_setup_fuse_fsname (
-	char** fuse_fsname, pfs_data* data
+static char* pfs_setup_fuse_fsname (
+	pfs_data* data
 ) {
 	char* name = NULL;
-	gboolean need_to_free = FALSE;
+	char* fuse_fsname = NULL;
 
 	if (data->opts.fuse.fsname != NULL) {
 		name = data->opts.fuse.fsname;
+		fuse_fsname = g_malloc (sizeof(*fuse_fsname) * (10 + strlen (name)));
+		sprintf (fuse_fsname, "-ofsname=%s", name);
 	}
 	else if (data->opts.lists[0]) {
 		name = pfs_basename (data->opts.lists[0]);
-		need_to_free = TRUE;
-	}
-
-	if (name != NULL) {
-		*fuse_fsname = malloc (sizeof (*fuse_fsname) * (10 + strlen (name)));
-		if(!*fuse_fsname) {
-			return FALSE;
-		}
-		sprintf (*fuse_fsname, "-ofsname=%s", name);
-		if (need_to_free) {
-			free (name);
-		}
+		fuse_fsname = g_malloc (sizeof(*fuse_fsname) * (10 + strlen (name)));
+		sprintf (fuse_fsname, "-ofsname=%s", name);
+		g_free (name);
 	}
 	else {
-		*fuse_fsname = "-ofsname=playlistfs";
+		fuse_fsname = g_strdup ("-ofsname=playlistfs");
 	}
-	return TRUE;
+	return fuse_fsname;
 }

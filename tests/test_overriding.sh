@@ -26,7 +26,6 @@ run_test "Mounting with --file and --symlink" test_mount \
     --file "$(fixture test.playlist)" --symlink "../test.playlist" \
     --symlink "/etc/fstab" --file "$(fixture fstab)"
 subtest "--file after --symlink wins" compare_file_info "$TEST_MOUNT_POINT/fstab" "$(fixture fstab)"
-ls -l $TEST_MOUNT_POINT
 subtest "--symlink after --file wins" test "$(readlink "$TEST_MOUNT_POINT/test.playlist")" = "../test.playlist"
 subtest "Non-overriden file exists" compare_file_info "$TEST_MOUNT_POINT/fstab.playlist" "$(fixture fstab.playlist)"
 subtest "Non-overriden symlink exists" test "$(readlink "$TEST_MOUNT_POINT/tmp")" = "../../tmp"

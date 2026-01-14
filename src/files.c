@@ -20,6 +20,7 @@
 
 #include "files.h"
 
+#include <glib.h>
 #include <stdlib.h>
 
 static ino_t current_ino = PFS_FILE_INO_MIN;
@@ -29,14 +30,8 @@ pfs_file* pfs_file_create (const char* path, const mode_t type, const struct tim
 	if (new_ino == 0)
 		return NULL;
 
-	pfs_file* file = calloc (1, sizeof (*file));
-	if (!file)
-		return NULL;
+	pfs_file* file = g_malloc0 (sizeof(*file));
 	file->path = g_string_new (path);
-	if (!file->path) {
-		free (file);
-		return NULL;
-	}
 	if (ts != NULL) {
 		file->ts.tv_sec = ts->tv_sec;
 		file->ts.tv_nsec = ts->tv_nsec;
@@ -49,7 +44,7 @@ pfs_file* pfs_file_create (const char* path, const mode_t type, const struct tim
 
 void pfs_file_free (pfs_file* file) {
 	g_string_free (file->path, TRUE);
-	free (file);
+	g_free (file);
 }
 
 void pfs_file_free_void (void* file) {

@@ -233,7 +233,7 @@ static int pfs_unlink (const char* path) {
 	if (!g_hash_table_lookup_extended (data->filetable, path + 1, (void**)&key, (void**) &file))
 		return -ENOENT;
 	g_hash_table_steal (data->filetable, key);
-	free (key);
+	g_free (key);
 	if (--file->nlink == 0) {
 		pfs_file_free (file);
 	}
@@ -246,10 +246,10 @@ static int pfs_symlink (const char* path, const char* link) {
 		return -EEXIST;
 	struct timespec now;
 	clock_gettime (CLOCK_REALTIME, &now);
-	pfs_file* file = pfs_file_create (strdup(path), S_IFLNK, &now);
+	pfs_file* file = pfs_file_create (path, S_IFLNK, &now);
 	if (file == NULL)
 		return -ENOSPC;
-	g_hash_table_insert (data->filetable, strdup(link + 1), file);
+	g_hash_table_insert (data->filetable, g_strdup(link + 1), file);
 	return 0;
 }
 
@@ -263,8 +263,8 @@ static int pfs_rename (const char* path, const char* newpath) {
 		return -ENOENT;
 
 	g_hash_table_steal (data->filetable, key);
-	free (key);
-	g_hash_table_insert (data->filetable, strdup (newpath+1), file);
+	g_free (key);
+	g_hash_table_insert (data->filetable, g_strdup (newpath+1), file);
 	return 0;
 }
 #else
@@ -305,9 +305,9 @@ static int pfs_rename (const char* path, const char* newpath, unsigned int flags
 		//   same file, then rename() does nothing, and returns a success status.
 		if (file2 != NULL && file1 == file2)
 			return 0;
-		g_hash_table_insert (data->filetable, strdup (newpath+1), file1);
+		g_hash_table_insert (data->filetable, g_strdup (newpath+1), file1);
 		g_hash_table_steal (data->filetable, name1);
-		free (name1);
+		g_free (name1);
 	}
 	return 0;
 }
@@ -318,9 +318,7 @@ static int pfs_link (const char* path, const char* newpath) {
 	pfs_file* file = g_hash_table_lookup (data->filetable, path + 1);
 	if (!file || S_ISDIR(file->type))
 		return -ENOENT;
-	char* key = strdup (newpath + 1);
-	if (!key)
-		return -errno;
+	char* key = g_strdup (newpath + 1);
 	g_hash_table_insert (data->filetable, key, file);
 	file->nlink++;
 	return 0;

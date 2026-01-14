@@ -25,7 +25,7 @@ Return part of path up to, but not including, the last "/".
 If path is NULL, return NULL.
 If path does not contain "/" (including "." and ".."), return ".".
 If path is "/" or directly under it, return "/".
-Returned string must be free()'d by the caller.
+Returned string must be g_free()'d by the caller.
 
 @parameter path: a Unix file path
 */
@@ -37,7 +37,7 @@ Return part of path after the last "/".
 If path is NULL, return NULL.
 If path does not contain "/" (including "." and ".."), return a copy of path.
 If path ends on a "/", return an empty string.
-Returned string must be free()'d by the caller.
+Returned string must be g_free()'d by the caller.
 
 @parameter path: a Unix file path
 */
