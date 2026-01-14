@@ -8,6 +8,10 @@ Note that versions before 0.3.0 were bumped at pretty much random points in time
 
 ## [Next]
 
+[Compare v0.5.0...main](https://github.com/trinistr/playlistfs/compare/v0.5.0...main)
+
+## [v0.5.0] — 2026-01-14
+
 **Added**
 - Persistent, unique inode numbers.
   - Each file added during initialization gets its own inode number.
@@ -25,7 +29,7 @@ Note that versions before 0.3.0 were bumped at pretty much random points in time
 - Symlinks can now be included the same as regular files. However, relative symlinks remain relative, so they probably won't resolve unless made intentionally for this.
 - Internally created symlinks (not external symlinks included as files) now report correct time of creation as atime/mtime/ctime. Birth time is not supported by FUSE.
 
-[Compare v0.4.0...main](https://github.com/trinistr/playlistfs/compare/v0.4.0...main)
+[Compare v0.4.0...v0.5.0](https://github.com/trinistr/playlistfs/compare/v0.4.0...v0.5.0)
 
 ## [v0.4.0] — 2026-01-12
 
@@ -144,6 +148,7 @@ This version was known as 0.9.0 at the time, so it reports that.
 - Several options passed to FUSE.
 
 [Next]: https://github.com/trinistr/playlistfs/tree/main
+[v0.5.0]: https://github.com/trinistr/playlistfs/tree/v0.5.0
 [v0.4.0]: https://github.com/trinistr/playlistfs/tree/v0.4.0
 [v0.3.1]: https://github.com/trinistr/playlistfs/tree/v0.3.1
 [v0.3.0]: https://github.com/trinistr/playlistfs/tree/v0.3.0

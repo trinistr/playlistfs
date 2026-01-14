@@ -121,14 +121,20 @@ cleaner: clean
 	@$(RM) $(TARGETDIR)/$(TARGET)
 	@$(RM) $(MANDIR)/$(TARGET).1.gz
 
+version.major:
+	rake -f scripts/rake.rb version:major
+version.minor:
+	rake -f scripts/rake.rb version:minor
+version.patch:
+	rake -f scripts/rake.rb version:patch
 
 #Non-File Targets
 .PHONY: \
-bin remake clean cleaner man \
+bin remake clean cleaner man include \
 test test-current \
 install-full install install-bin install-man install-supplementary install-mime-package install-set-default \
 uninstall-full uninstall uninstall-bin uninstall-man uninstall-supplementary uninstall-mime-package \
-include
+version.major version.minor version.patch
 
 #---------------------------------------------------------------------------------
 #DO NOT EDIT BELOW THIS LINE
