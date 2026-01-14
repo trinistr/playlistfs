@@ -14,6 +14,7 @@ Note that versions before 0.3.0 were bumped at pretty much random points in time
   - `link`ed names will use the same inode number. Other software can detect this situtation now.
 
 **Changed**
+- Short form of `--symlinks` option was changed to `-S` (from `-s`).
 - Due to using inode numbers, rename(2) will no longer do anything when asked to rename file to itself, as it should.
 - `stat`ing the file system now reports semi-accurate inode numbers: not increasing on link(2), increasing on symlink(2), not decreasing on unlink(2). Additionally, file system will now report "free" inodes.
 

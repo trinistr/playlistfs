@@ -1,10 +1,6 @@
-- (?) use lstat instead of stat for original files when building table
-- (?) handle dereferencing or not of symlinks
-- (?) actually implement atime touching (though shouldn't it just work?)
 - --unmount/-u option (use fusermount -u / umount)
 - (?) redo --no-relative-* as positive options and flags
 - (?) add option to mount over non-empty directory (will always work in FUSE 3 anyway)
-- Fix memory leaks in operations
 - Add optional failures when something can't be accessed instead of skipping
 - (?) Impose (large) limits on paths to prevent runaway allocation
 - Don't use default_permissions, as it prohibits things like link(2) on files not owned by user
@@ -17,3 +13,4 @@
   - Add file name mapping
 - Add final list of files in a hidden file inside directory
   - Use it for magic too!
+- Add --symlink option for adding symlinks to files

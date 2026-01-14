@@ -407,7 +407,7 @@ static GOptionContext* pfs_setup_options (
 	GOptionEntry options[] = {
 		{ "target", 't', G_OPTION_FLAG_NONE, G_OPTION_ARG_FILENAME, &opts->mount_point, "Set mount point explicitly", "MOUNT_DIR"},
 		{ "file", 'f', G_OPTION_FLAG_NONE, G_OPTION_ARG_FILENAME_ARRAY, &opts->files, "Add a single file, overriding any lists", "FILE"},
-		{ "symlinks", 's', G_OPTION_FLAG_NONE, G_OPTION_ARG_NONE, &opts->symlinks, "Show symlinks instead of regular files", NULL},
+		{ "symlinks", 'S', G_OPTION_FLAG_NONE, G_OPTION_ARG_NONE, &opts->symlinks, "Display all files as symlinks to originals", NULL},
 		{ "no-relative", 'N', G_OPTION_FLAG_NO_ARG, G_OPTION_ARG_CALLBACK, pfs_no_relative_option_callback, "Combine --no-relative-files and --no-relative-paths", NULL},
 		{ "relative", 0, G_OPTION_FLAG_NO_ARG, G_OPTION_ARG_CALLBACK, pfs_relative_option_callback, "Enable all relative path handling", NULL},
 		{ "no-relative-files", 0, G_OPTION_FLAG_NONE, G_OPTION_ARG_NONE, &opts->relative_disabled.files, "Disable relative path handling for files added with --file", NULL},
