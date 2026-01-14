@@ -31,7 +31,7 @@ endif
 
 #man things
 MANGEN      ::= $(SCRIPTDIR)/mangen
-MAN_NAME    ::= playlist as a file system
+MAN_NAME    ::= playlist-like FUSE file system
 
 #Flags, Libraries and Includes
 FUSE ?= 3 # Set to 2 to use FUSE 2
@@ -122,11 +122,11 @@ cleaner: clean
 	@$(RM) $(MANDIR)/$(TARGET).1.gz
 
 version.major:
-	rake -f scripts/rake.rb version:major
+	rake -f $(SCRIPTDIR)/rake.rb version:major
 version.minor:
-	rake -f scripts/rake.rb version:minor
+	rake -f $(SCRIPTDIR)/rake.rb version:minor
 version.patch:
-	rake -f scripts/rake.rb version:patch
+	rake -f $(SCRIPTDIR)/rake.rb version:patch
 
 #Non-File Targets
 .PHONY: \

@@ -32,13 +32,13 @@ HELP_PROCESSING="|perl -pe 'BEGIN{undef $/;} s/Usage:\s+/Usage: /'"
 VERSION_PROCESING=
 
 
-HELP="`\"$PROGRAM\" $HELP_OPTION`"
-VERSION="`\"$PROGRAM\" $VERSION_OPTION`"
-HELP="`sh -c \"echo '$HELP' $HELP_PROCESSING\"`"
-VERSION="`sh -c \"echo '$VERSION' $VERSION_PROCESSING\"`"
+HELP="$(LC_ALL=C "$PROGRAM" $HELP_OPTION)"
+VERSION="$(LC_ALL=C "$PROGRAM" $VERSION_OPTION)"
+HELP="$(sh -c "echo '$HELP' $HELP_PROCESSING")"
+VERSION="$(sh -c "echo '$VERSION' $VERSION_PROCESSING")"
 
-TMPDIR="`mktemp -d`"
-FILE="$TMPDIR/`basename \"$PROGRAM\"`"
+TMPDIR="$(mktemp -d)"
+FILE="$TMPDIR/$(basename "$PROGRAM")"
 echo '#!/bin/sh' > "$FILE"
 echo 'case "$1" in' >> "$FILE"
 echo '--help)' >> "$FILE"

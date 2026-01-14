@@ -8,6 +8,9 @@ Note that versions before 0.3.0 were bumped at pretty much random points in time
 
 ## [Next]
 
+**Fixed**
+- Depending on locale, text in man page may have been broken. It is now always generated with `LC_ALL=C` to prevent that.
+
 [Compare v0.5.0...main](https://github.com/trinistr/playlistfs/compare/v0.5.0...main)
 
 ## [v0.5.0] — 2026-01-14
