@@ -176,7 +176,7 @@ named like the playlist, and the automatic mounting will not work.
 
 ### After mounting
 
-PlaylistFS does not allow creating any new files or directories. However, symbolic links *can* be created, as they follow the same semantics.
+PlaylistFS does not allow creating any new files (as they would not have any backing file) or directories (not supported in general). However, symbolic links *can* be created, as they follow the intended semantics.
 
 Additionally, new hard links can be created (see `ln`) and files can be deleted.
 

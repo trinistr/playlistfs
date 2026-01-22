@@ -14,7 +14,8 @@ playlist_dir="`dirname $playlist`/`basename $playlist .playlist` playlist"
 shift
 
 if [ -d "$playlist_dir" ]; then
-	fusermount3 -u -- "$playlist_dir" && rmdir "$playlist_dir"
+	# https://gitlab.xfce.org/xfce/thunar/-/issues/1778
+	fusermount3 -u -- "$playlist_dir" && sleep 0.5 && rmdir "$playlist_dir"
 else
 	mkdir -p -- "$playlist_dir" && playlistfs "$@" -- "$playlist" "$playlist_dir"
 fi

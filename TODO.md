@@ -13,3 +13,5 @@
 - Add final list of files in a hidden file inside directory
   - Use it for magic too!
 - Make --symlinks actually behave the same as --symlink
+  - Or change it to only impact lists?
+
