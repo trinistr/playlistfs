@@ -8,7 +8,11 @@ Note that versions before 0.3.0 were bumped at pretty much random points in time
 
 ## [Next]
 
-[Compare v0.5.1...main](https://github.com/trinistr/playlistfs/compare/v0.5.1...main)
+[Compare v0.5.2...main](https://github.com/trinistr/playlistfs/compare/v0.5.2...main)
+
+## [v0.5.2] — 2026-01-22
+
+[Compare v0.5.1...v0.5.2](https://github.com/trinistr/playlistfs/compare/v0.5.1...v0.5.2)
 
 ## [v0.5.1] — 2026-01-14
 
@@ -158,6 +162,7 @@ This version was known as 0.9.0 at the time, so it reports that.
 - Several options passed to FUSE.
 
 [Next]: https://github.com/trinistr/playlistfs/tree/main
+[v0.5.2]: https://github.com/trinistr/playlistfs/tree/v0.5.2
 [v0.5.1]: https://github.com/trinistr/playlistfs/tree/v0.5.1
 [v0.5.0]: https://github.com/trinistr/playlistfs/tree/v0.5.0
 [v0.4.0]: https://github.com/trinistr/playlistfs/tree/v0.4.0
